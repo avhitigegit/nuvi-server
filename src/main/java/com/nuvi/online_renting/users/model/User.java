@@ -1,4 +1,4 @@
-package users.model;
+package com.nuvi.online_renting.users.model;
 
 import jakarta.persistence.*;
 

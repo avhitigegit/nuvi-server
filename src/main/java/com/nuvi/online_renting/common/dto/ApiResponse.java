@@ -1,4 +1,4 @@
-package common.dto;
+package com.nuvi.online_renting.common.dto;
 
 public class ApiResponse<T>{
     private boolean success;

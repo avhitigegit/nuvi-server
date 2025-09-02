@@ -1,4 +1,4 @@
-package common.exceptions;
+package com.nuvi.online_renting.common.exceptions;
 
 public class ResourceNotFoundException extends RuntimeException{
     public ResourceNotFoundException(String message) {

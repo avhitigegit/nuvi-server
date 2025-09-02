@@ -1,7 +1,7 @@
-package common.exceptions;
+package com.nuvi.online_renting.common.exceptions;
 
 
-import common.dto.ApiResponse;
+import com.nuvi.online_renting.common.dto.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;

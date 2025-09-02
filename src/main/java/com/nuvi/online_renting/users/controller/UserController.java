@@ -1,15 +1,15 @@
-package users.controller;
+package com.nuvi.online_renting.users.controller;
 
-import common.dto.ApiResponse;
+import com.nuvi.online_renting.common.dto.ApiResponse;
+import com.nuvi.online_renting.users.model.User;
+import com.nuvi.online_renting.users.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import users.model.User;
-import users.service.UserService;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/com/nuvi/online_renting/users")
 public class UserController {
 
     private final UserService userService;
