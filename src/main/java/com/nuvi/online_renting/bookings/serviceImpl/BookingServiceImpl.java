@@ -1,91 +1,111 @@
 package com.nuvi.online_renting.bookings.serviceImpl;
 
-import com.nuvi.online_renting.bookings.dto.BookingDTO;
+import com.nuvi.online_renting.bookings.dto.BookingRequestDTO;
+import com.nuvi.online_renting.bookings.dto.BookingResponseDTO;
 import com.nuvi.online_renting.bookings.model.Booking;
 import com.nuvi.online_renting.bookings.repository.BookingRepository;
 import com.nuvi.online_renting.bookings.service.BookingService;
+import com.nuvi.online_renting.common.dto.BookingStatus;
 import com.nuvi.online_renting.item.model.Item;
 import com.nuvi.online_renting.item.repository.ItemRepository;
 import com.nuvi.online_renting.users.model.User;
 import com.nuvi.online_renting.users.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final ItemRepository itemRepository;
 
-    public BookingServiceImpl(BookingRepository bookingRepository,
-                              UserRepository userRepository,
-                              ItemRepository itemRepository) {
-        this.bookingRepository = bookingRepository;
-        this.userRepository = userRepository;
-        this.itemRepository = itemRepository;
-    }
+//    public BookingServiceImpl(BookingRepository bookingRepository,
+//                              UserRepository userRepository,
+//                              ItemRepository itemRepository) {
+//        this.bookingRepository = bookingRepository;
+//        this.userRepository = userRepository;
+//        this.itemRepository = itemRepository;
+//    }
 
     @Override
-    public BookingDTO createBooking(BookingDTO bookingDTO) {
-        User user = userRepository.findById(bookingDTO.getUserId())
+    @Transactional
+    public BookingResponseDTO createBooking(BookingRequestDTO bookingRequestDTO) {
+        User user = userRepository.findById(bookingRequestDTO.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        Item item = itemRepository.findById(bookingDTO.getItemId())
+        Item item = itemRepository.findById(bookingRequestDTO.getItemId())
                 .orElseThrow(() -> new RuntimeException("Item not found"));
+
+        // Prevent double booking
+        boolean conflict = bookingRepository.existsOverlappingBooking(
+                item.getId(), bookingRequestDTO.getStartDate(), bookingRequestDTO.getEndDate()
+        );
+        if (conflict) {
+            throw new RuntimeException("Item already booked for this date range");
+        }
 
         Booking booking = new Booking();
         booking.setUser(user);
         booking.setItem(item);
-        booking.setStartDate(bookingDTO.getStartDate());
-        booking.setEndDate(bookingDTO.getEndDate());
-        booking.setStatus(bookingDTO.getStatus());
+        booking.setStartDate(bookingRequestDTO.getStartDate());
+        booking.setEndDate(bookingRequestDTO.getEndDate());
+        booking.setStatus(BookingStatus.PENDING.toString());
 
         Booking savedBooking = bookingRepository.save(booking);
-        return convertToDTO(savedBooking);
+        return convertToBookingResponseDTO(savedBooking);
     }
 
     @Override
-    public BookingDTO getBookingById(Long id) {
+    public BookingResponseDTO getBookingById(Long id) {
         return bookingRepository.findById(id)
-                .map(this::convertToDTO)
+                .map(this::convertToBookingResponseDTO)
                 .orElseThrow(() -> new RuntimeException("Booking not found with id " + id));
     }
 
     @Override
-    public List<BookingDTO> getAllBookings() {
+    public List<BookingResponseDTO> getAllBookings() {
         return bookingRepository.findAll().stream()
-                .map(this::convertToDTO)
+                .map(this::convertToBookingResponseDTO)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public BookingDTO updateBooking(Long id, BookingDTO bookingDTO) {
+    @Transactional
+    public BookingResponseDTO updateBooking(Long id, BookingRequestDTO bookingRequestDTO) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Booking not found with id " + id));
 
-        User user = userRepository.findById(bookingDTO.getUserId())
+        if (booking.getStatus() != BookingStatus.PENDING.toString()) {
+            throw new RuntimeException("Only PENDING bookings can be updated. Please Delete the booking and CREATE NEW");
+        }
+
+        User user = userRepository.findById(bookingRequestDTO.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        Item item = itemRepository.findById(bookingDTO.getItemId())
+        Item item = itemRepository.findById(bookingRequestDTO.getItemId())
                 .orElseThrow(() -> new RuntimeException("Item not found"));
 
         booking.setUser(user);
         booking.setItem(item);
-        booking.setStartDate(bookingDTO.getStartDate());
-        booking.setEndDate(bookingDTO.getEndDate());
-        booking.setStatus(bookingDTO.getStatus());
+        booking.setStartDate(bookingRequestDTO.getStartDate());
+        booking.setEndDate(bookingRequestDTO.getEndDate());
+//        booking.setStatus(bookingRequestDTO.getStatus());
 
         Booking updatedBooking = bookingRepository.save(booking);
-        return convertToDTO(updatedBooking);
+        return convertToBookingResponseDTO(updatedBooking);
     }
 
     @Override
+    @Transactional
     public void deleteBooking(Long id) {
         bookingRepository.deleteById(id);
     }
 
-    private BookingDTO convertToDTO(Booking booking) {
-        BookingDTO dto = new BookingDTO();
+    private BookingResponseDTO convertToBookingResponseDTO(Booking booking) {
+        BookingResponseDTO dto = new BookingResponseDTO();
         dto.setId(booking.getId());
         dto.setUserId(booking.getUser().getId());
         dto.setItemId(booking.getItem().getId());
@@ -93,5 +113,23 @@ public class BookingServiceImpl implements BookingService {
         dto.setEndDate(booking.getEndDate());
         dto.setStatus(booking.getStatus());
         return dto;
+    }
+
+    @Transactional
+    public BookingResponseDTO updateStatus(Long bookingId, BookingStatus bookingStatus) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        if (booking.getStatus().toString() != BookingStatus.PENDING.toString()) {
+            throw new RuntimeException("Only PENDING bookings can be updated");
+        }
+
+        if (bookingStatus == BookingStatus.CONFIRMED || bookingStatus == BookingStatus.CANCELLED) {
+            booking.setStatus(bookingStatus.toString());
+        } else {
+            throw new RuntimeException("Invalid status transition");
+        }
+
+        return convertToBookingResponseDTO(bookingRepository.save(booking));
     }
 }

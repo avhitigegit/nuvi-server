@@ -3,22 +3,26 @@ package com.nuvi.online_renting.bookings.model;
 import com.nuvi.online_renting.item.model.Item;
 import com.nuvi.online_renting.users.model.User;
 import jakarta.persistence.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "bookings")
+@EntityListeners(org.springframework.data.jpa.domain.support.AuditingEntityListener.class)
 public class Booking {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "item_id")
+    @JoinColumn(name = "item_id", nullable = false)
     private Item item;
 
     @Column(nullable = false)
@@ -29,6 +33,14 @@ public class Booking {
 
     @Column(nullable = false)
     private String status; // e.g. PENDING, CONFIRMED, CANCELLED
+
+    @CreatedDate
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @LastModifiedDate
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
 
     // getters & setters
     public Long getId() {

@@ -1,15 +1,25 @@
 package com.nuvi.online_renting.item.dto;
 
-public class ItemDTO {
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import lombok.Data;
+
+@Data
+public class ItemRequestDTO {
     private Long id;
+    @NotBlank(message = "Item name cannot be empty")
     private String name;
     private String description;
+    @NotNull(message = "Price per day is required")
+    @Positive(message = "Price must be greater than 0")
     private Double pricePerDay;
     private Boolean available;
 
-    public ItemDTO() {}
+    public ItemRequestDTO() {
+    }
 
-    public ItemDTO(Long id, String name, String description, Double pricePerDay, Boolean available) {
+    public ItemRequestDTO(Long id, String name, String description, Double pricePerDay, Boolean available) {
         this.id = id;
         this.name = name;
         this.description = description;

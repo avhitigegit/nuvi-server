@@ -1,9 +1,16 @@
 package com.nuvi.online_renting.item.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "items")
+@EntityListeners(org.springframework.data.jpa.domain.support.AuditingEntityListener.class)
 public class Item {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -15,16 +22,28 @@ public class Item {
     @Column(nullable = false)
     private String description;
 
+    @NotNull(message = "Price per day is required")
+    @Positive(message = "Price must be greater than 0")
     @Column(nullable = false)
     private Double pricePerDay;
+
+    @CreatedDate
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @LastModifiedDate
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
 
     public Item() {
     }
 
-    public Item(String name, String description, Double pricePerDay) {
+    public Item(String name, String description, Double pricePerDay, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.name = name;
         this.description = description;
         this.pricePerDay = pricePerDay;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
     }
 
     // Getters and setters
@@ -60,5 +79,21 @@ public class Item {
 
     public void setPricePerDay(Double pricePerDay) {
         this.pricePerDay = pricePerDay;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

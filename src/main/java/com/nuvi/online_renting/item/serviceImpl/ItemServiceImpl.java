@@ -1,10 +1,12 @@
 package com.nuvi.online_renting.item.serviceImpl;
 
-import com.nuvi.online_renting.item.dto.ItemDTO;
+import com.nuvi.online_renting.item.dto.ItemRequestDTO;
+import com.nuvi.online_renting.item.dto.ItemResponseDTO;
 import com.nuvi.online_renting.item.model.Item;
 import com.nuvi.online_renting.item.repository.ItemRepository;
 import com.nuvi.online_renting.item.service.ItemService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -18,54 +20,59 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
-    public ItemDTO createItem(ItemDTO itemDTO) {
+    @Transactional
+    public ItemResponseDTO createItem(ItemRequestDTO itemRequestDTO) {
         Item item = new Item();
-        item.setName(itemDTO.getName());
-        item.setDescription(itemDTO.getDescription());
-        item.setPricePerDay(itemDTO.getPricePerDay());
+        item.setName(itemRequestDTO.getName());
+        item.setDescription(itemRequestDTO.getDescription());
+        item.setPricePerDay(itemRequestDTO.getPricePerDay());
 
         Item savedItem = itemRepository.save(item);
-        return convertToDTO(savedItem);
+        return convertToItemResponseDTO(savedItem);
     }
 
     @Override
-    public ItemDTO getItemById(Long id) {
+    @Transactional
+    public ItemResponseDTO getItemById(Long id) {
         return itemRepository.findById(id)
-                .map(this::convertToDTO)
+                .map(this::convertToItemResponseDTO)
                 .orElseThrow(() -> new RuntimeException("Item not found with id " + id));
     }
 
     @Override
-    public List<ItemDTO> getAllItems() {
+    @Transactional
+    public List<ItemResponseDTO> getAllItems() {
         return itemRepository.findAll().stream()
-                .map(this::convertToDTO)
+                .map(this::convertToItemResponseDTO)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public ItemDTO updateItem(Long id, ItemDTO itemDTO) {
+    @Transactional
+    public ItemResponseDTO updateItem(Long id, ItemRequestDTO itemRequestDTO) {
         Item item = itemRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Item not found with id " + id));
 
-        item.setName(itemDTO.getName());
-        item.setDescription(itemDTO.getDescription());
-        item.setPricePerDay(itemDTO.getPricePerDay());
+        item.setName(itemRequestDTO.getName());
+        item.setDescription(itemRequestDTO.getDescription());
+        item.setPricePerDay(itemRequestDTO.getPricePerDay());
 
         Item updatedItem = itemRepository.save(item);
-        return convertToDTO(updatedItem);
+        return convertToItemResponseDTO(updatedItem);
     }
 
     @Override
+    @Transactional
     public void deleteItem(Long id) {
         itemRepository.deleteById(id);
     }
 
-    private ItemDTO convertToDTO(Item item) {
-        ItemDTO dto = new ItemDTO();
-        dto.setId(item.getId());
-        dto.setName(item.getName());
-        dto.setDescription(item.getDescription());
-        dto.setPricePerDay(item.getPricePerDay());
-        return dto;
+    private ItemResponseDTO convertToItemResponseDTO(Item item) {
+        ItemResponseDTO itemResponseDTO = new ItemResponseDTO();
+        itemResponseDTO.setId(item.getId());
+        itemResponseDTO.setName(item.getName());
+        itemResponseDTO.setDescription(item.getDescription());
+        itemResponseDTO.setPricePerDay(item.getPricePerDay());
+        return itemResponseDTO;
     }
 }
