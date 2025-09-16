@@ -2,7 +2,7 @@ package com.nuvi.online_renting.bookings.service;
 
 import com.nuvi.online_renting.bookings.dto.BookingRequestDTO;
 import com.nuvi.online_renting.bookings.dto.BookingResponseDTO;
-import com.nuvi.online_renting.common.dto.BookingStatus;
+import com.nuvi.online_renting.common.enums.BookingStatus;
 
 import java.util.List;
 

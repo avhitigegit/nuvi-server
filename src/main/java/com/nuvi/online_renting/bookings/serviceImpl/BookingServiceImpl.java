@@ -5,7 +5,7 @@ import com.nuvi.online_renting.bookings.dto.BookingResponseDTO;
 import com.nuvi.online_renting.bookings.model.Booking;
 import com.nuvi.online_renting.bookings.repository.BookingRepository;
 import com.nuvi.online_renting.bookings.service.BookingService;
-import com.nuvi.online_renting.common.dto.BookingStatus;
+import com.nuvi.online_renting.common.enums.BookingStatus;
 import com.nuvi.online_renting.item.model.Item;
 import com.nuvi.online_renting.item.repository.ItemRepository;
 import com.nuvi.online_renting.users.model.User;
@@ -104,17 +104,6 @@ public class BookingServiceImpl implements BookingService {
         bookingRepository.deleteById(id);
     }
 
-    private BookingResponseDTO convertToBookingResponseDTO(Booking booking) {
-        BookingResponseDTO dto = new BookingResponseDTO();
-        dto.setId(booking.getId());
-        dto.setUserId(booking.getUser().getId());
-        dto.setItemId(booking.getItem().getId());
-        dto.setStartDate(booking.getStartDate());
-        dto.setEndDate(booking.getEndDate());
-        dto.setStatus(booking.getStatus());
-        return dto;
-    }
-
     @Transactional
     public BookingResponseDTO updateStatus(Long bookingId, BookingStatus bookingStatus) {
         Booking booking = bookingRepository.findById(bookingId)
@@ -131,5 +120,21 @@ public class BookingServiceImpl implements BookingService {
         }
 
         return convertToBookingResponseDTO(bookingRepository.save(booking));
+    }
+
+    private BookingResponseDTO convertToBookingResponseDTO(Booking booking) {
+        BookingResponseDTO bookingResponseDTO = new BookingResponseDTO();
+        bookingResponseDTO.setId(booking.getId());
+        bookingResponseDTO.setUserId(booking.getUser().getId());
+        bookingResponseDTO.setItemId(booking.getItem().getId());
+        bookingResponseDTO.setStartDate(booking.getStartDate());
+        bookingResponseDTO.setEndDate(booking.getEndDate());
+        bookingResponseDTO.setStatus(booking.getStatus());
+        bookingResponseDTO.setCreatedAt(booking.getCreatedAt());
+        bookingResponseDTO.setUpdatedAt(booking.getUpdatedAt());
+        bookingResponseDTO.setCreatedBy(booking.getCreatedBy());
+        bookingResponseDTO.setUpdatedBy(booking.getUpdatedBy());
+
+        return bookingResponseDTO;
     }
 }

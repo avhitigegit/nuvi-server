@@ -1,4 +1,4 @@
-package com.nuvi.online_renting.config.security;
+package com.nuvi.online_renting.common.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;

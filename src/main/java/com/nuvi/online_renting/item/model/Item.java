@@ -3,14 +3,17 @@ package com.nuvi.online_renting.item.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "items")
-@EntityListeners(org.springframework.data.jpa.domain.support.AuditingEntityListener.class)
+@EntityListeners(AuditingEntityListener.class)
 public class Item {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,16 +38,22 @@ public class Item {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
-    public Item() {
-    }
+    @CreatedBy
+    private String createdBy;
 
-    public Item(String name, String description, Double pricePerDay, LocalDateTime createdAt, LocalDateTime updatedAt) {
-        this.name = name;
-        this.description = description;
-        this.pricePerDay = pricePerDay;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-    }
+    @LastModifiedBy
+    private String updatedBy;
+
+//    public Item() {
+//    }
+//
+//    public Item(String name, String description, Double pricePerDay, LocalDateTime createdAt, LocalDateTime updatedAt) {
+//        this.name = name;
+//        this.description = description;
+//        this.pricePerDay = pricePerDay;
+//        this.createdAt = createdAt;
+//        this.updatedAt = updatedAt;
+//    }
 
     // Getters and setters
 
@@ -95,5 +104,21 @@ public class Item {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public String getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public void setUpdatedBy(String updatedBy) {
+        this.updatedBy = updatedBy;
     }
 }

@@ -1,7 +1,7 @@
 package com.nuvi.online_renting.users.serviceImpl;
 
 
-import com.nuvi.online_renting.common.dto.Role;
+import com.nuvi.online_renting.common.enums.Role;
 import com.nuvi.online_renting.common.exceptions.ResourceNotFoundException;
 import com.nuvi.online_renting.users.dto.UserRequestDTO;
 import com.nuvi.online_renting.users.dto.UserResponseDTO;
@@ -83,14 +83,16 @@ public class UserServiceImpl implements UserService {
     }
 
     private UserResponseDTO mapToResponseDTO(User user) {
-        UserResponseDTO dto = new UserResponseDTO();
-        dto.setId(user.getId());
-        dto.setName(user.getName());
-        dto.setEmail(user.getEmail());
-        dto.setRole(user.getRole());
-        dto.setEnabled(user.isEnabled());
-        dto.setCreatedAt(user.getCreatedAt());
-        dto.setUpdatedAt(user.getUpdatedAt());
-        return dto;
+        UserResponseDTO userResponseDTO = new UserResponseDTO();
+        userResponseDTO.setId(user.getId());
+        userResponseDTO.setName(user.getName());
+        userResponseDTO.setEmail(user.getEmail());
+        userResponseDTO.setRole(user.getRole());
+        userResponseDTO.setEnabled(user.isEnabled());
+        userResponseDTO.setCreatedAt(user.getCreatedAt());
+        userResponseDTO.setUpdatedAt(user.getUpdatedAt());
+        userResponseDTO.setCreatedBy(user.getCreatedBy());
+        userResponseDTO.setUpdatedBy(user.getUpdatedBy());
+        return userResponseDTO;
     }
 }

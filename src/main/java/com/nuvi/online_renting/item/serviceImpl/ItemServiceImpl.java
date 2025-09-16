@@ -73,6 +73,10 @@ public class ItemServiceImpl implements ItemService {
         itemResponseDTO.setName(item.getName());
         itemResponseDTO.setDescription(item.getDescription());
         itemResponseDTO.setPricePerDay(item.getPricePerDay());
+        itemResponseDTO.setCreatedAt(item.getCreatedAt());
+        itemResponseDTO.setUpdatedAt(item.getUpdatedAt());
+        itemResponseDTO.setCreatedBy(item.getCreatedBy());
+        itemResponseDTO.setUpdatedBy(item.getUpdatedBy());
         return itemResponseDTO;
     }
 }

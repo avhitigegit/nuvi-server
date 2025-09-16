@@ -13,5 +13,7 @@ public class ItemResponseDTO {
     private Double pricePerDay;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String createdBy;
+    private String updatedBy;
 
 }
