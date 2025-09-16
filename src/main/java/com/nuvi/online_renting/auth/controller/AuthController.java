@@ -4,12 +4,13 @@ import com.nuvi.online_renting.auth.dto.AuthRequest;
 import com.nuvi.online_renting.auth.dto.AuthResponse;
 import com.nuvi.online_renting.auth.dto.RegisterRequest;
 import com.nuvi.online_renting.auth.service.CustomUserDetailsService;
-import com.nuvi.online_renting.common.dto.Role;
-import com.nuvi.online_renting.config.security.JwtTokenService;
+import com.nuvi.online_renting.common.enums.Role;
+import com.nuvi.online_renting.common.security.JwtTokenService;
 import com.nuvi.online_renting.users.model.User;
 import com.nuvi.online_renting.users.repository.UserRepository;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -42,6 +43,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest req) {
         if (userRepository.existsByEmail(req.getEmail())) {
             return ResponseEntity.badRequest().body("Email already in use");
@@ -57,6 +59,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
+    @PreAuthorize("hasAnyRole('USER','SELLER', 'ADMIN')")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest req) {
         authManager.authenticate(new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword()));
         UserDetails user = userDetailsService.loadUserByUsername(req.getEmail());

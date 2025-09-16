@@ -1,17 +1,24 @@
 package com.nuvi.online_renting.bookings.service;
 
-import com.nuvi.online_renting.bookings.dto.BookingDTO;
+import com.nuvi.online_renting.bookings.dto.BookingRequestDTO;
+import com.nuvi.online_renting.bookings.dto.BookingResponseDTO;
+import com.nuvi.online_renting.common.enums.BookingStatus;
 
 import java.util.List;
 
 public interface BookingService {
-    BookingDTO createBooking(BookingDTO bookingDTO);
 
-    BookingDTO getBookingById(Long id);
+    BookingResponseDTO createBooking(BookingRequestDTO bookingRequestDTO);
 
-    List<BookingDTO> getAllBookings();
+    BookingResponseDTO getBookingById(Long id);
 
-    BookingDTO updateBooking(Long id, BookingDTO bookingDTO);
+    List<BookingResponseDTO> getAllBookings();
+
+    BookingResponseDTO updateBooking(Long id, BookingRequestDTO bookingRequestDTO);
 
     void deleteBooking(Long id);
+
+    BookingResponseDTO updateStatus(Long id, BookingStatus bookingStatus);
+
+
 }

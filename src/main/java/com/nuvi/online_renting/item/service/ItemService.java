@@ -1,17 +1,18 @@
 package com.nuvi.online_renting.item.service;
 
-import com.nuvi.online_renting.item.dto.ItemDTO;
+import com.nuvi.online_renting.item.dto.ItemRequestDTO;
+import com.nuvi.online_renting.item.dto.ItemResponseDTO;
 
 import java.util.List;
 
 public interface ItemService {
-    ItemDTO createItem(ItemDTO itemDTO);
+    ItemResponseDTO createItem(ItemRequestDTO itemRequestDTO);
 
-    ItemDTO getItemById(Long id);
+    ItemResponseDTO getItemById(Long id);
 
-    List<ItemDTO> getAllItems();
+    List<ItemResponseDTO> getAllItems();
 
-    ItemDTO updateItem(Long id, ItemDTO itemDTO);
+    ItemResponseDTO updateItem(Long id, ItemRequestDTO itemRequestDTO);
 
     void deleteItem(Long id);
 }

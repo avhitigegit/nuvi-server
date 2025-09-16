@@ -1,13 +1,20 @@
 package com.nuvi.online_renting.bookings.dto;
 
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+
 import java.time.LocalDate;
 
-public class BookingDTO {
+@Data
+public class BookingRequestDTO  {
 
     private Long id;
     private Long userId;
+    @NotNull(message = "Item ID is required")
     private Long itemId;
+    @NotNull(message = "Start date is required")
     private LocalDate startDate;
+    @NotNull(message = "End date is required")
     private LocalDate endDate;
     private String status;
 
