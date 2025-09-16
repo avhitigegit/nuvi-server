@@ -1,4 +1,4 @@
-package com.nuvi.online_renting.common.config.audit;
+package com.nuvi.online_renting.common.audit;
 
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.security.core.Authentication;

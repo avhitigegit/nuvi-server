@@ -1,4 +1,4 @@
-package com.nuvi.online_renting.common.config.audit;
+package com.nuvi.online_renting.common.audit;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
