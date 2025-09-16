@@ -1,4 +1,4 @@
-package com.nuvi.online_renting.config.security;
+package com.nuvi.online_renting.common.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

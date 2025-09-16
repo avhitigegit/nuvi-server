@@ -14,6 +14,10 @@ public class UserRequestDTO {
     @NotBlank(message = "Email is required")
     private String email;
 
+    @NotBlank(message = "Password is required")
+    @Size(min = 6, message = "Password must be at least 6 characters")
+    private String password;
+
     public @NotBlank(message = "Name is required") String getName() {
         return name;
     }
@@ -28,5 +32,13 @@ public class UserRequestDTO {
 
     public void setEmail(@Email(message = "Email should be valid") @NotBlank(message = "Email is required") String email) {
         this.email = email;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 }
