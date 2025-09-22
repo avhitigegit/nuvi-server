@@ -3,6 +3,9 @@ package com.nuvi.online_renting.users.serviceImpl;
 
 import com.nuvi.online_renting.common.enums.Role;
 import com.nuvi.online_renting.common.exceptions.ResourceNotFoundException;
+import com.nuvi.online_renting.common.security.AuthenticationFacade;
+import com.nuvi.online_renting.users.dto.UserProfileRequest;
+import com.nuvi.online_renting.users.dto.UserProfileResponse;
 import com.nuvi.online_renting.users.dto.UserRequestDTO;
 import com.nuvi.online_renting.users.dto.UserResponseDTO;
 import com.nuvi.online_renting.users.model.User;
@@ -21,6 +24,8 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserRepository userRepository;
+    private AuthenticationFacade authenticationFacade;
+
 
     @Override
     @Transactional
@@ -80,6 +85,45 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
         userRepository.delete(user);
+    }
+
+    @Override
+    public UserProfileResponse getMyProfile() {
+        User user = authenticationFacade.getCurrentUser();
+        return mapToProfileResponse(user);
+    }
+
+    @Override
+    @Transactional
+    public UserProfileResponse updateMyProfile(UserProfileRequest userProfileRequest) {
+        User user = authenticationFacade.getCurrentUser();
+        user.setName(userProfileRequest.getName());
+        user.setPhone(userProfileRequest.getPhone());
+        user.setAddress(userProfileRequest.getAddress());
+        user.setNicNumber(userProfileRequest.getNicNumber());
+        user.setProfilePictureUrl(userProfileRequest.getProfilePictureUrl());
+        userRepository.save(user);
+        return mapToProfileResponse(user);
+    }
+
+    @Override
+    @Transactional
+    public void deactivateMyAccount() {
+        User user = authenticationFacade.getCurrentUser();
+        user.setEnabled(false);
+        userRepository.save(user);
+    }
+
+    private UserProfileResponse mapToProfileResponse(User user) {
+        UserProfileResponse userProfileResponse = new UserProfileResponse();
+        userProfileResponse.setName(user.getName());
+        userProfileResponse.setEmail(user.getEmail());
+        userProfileResponse.setPhone(user.getPhone());
+        userProfileResponse.setAddress(user.getAddress());
+        userProfileResponse.setNicNumber(user.getNicNumber());
+        userProfileResponse.setProfilePictureUrl(user.getProfilePictureUrl());
+        userProfileResponse.setKycVerified(user.isKycVerified());
+        return userProfileResponse;
     }
 
     private UserResponseDTO mapToResponseDTO(User user) {
