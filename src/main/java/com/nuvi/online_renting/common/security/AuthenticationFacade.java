@@ -1,13 +1,13 @@
 package com.nuvi.online_renting.common.security;
 
-import com.nuvi.online_renting.users.repository.UserRepository;
 import com.nuvi.online_renting.users.model.User;
-import org.springframework.context.annotation.ComponentScan;
+import com.nuvi.online_renting.users.repository.UserRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
 
 
-@ComponentScan
+@Component
 public class AuthenticationFacade {
     private final UserRepository userRepository;
 
