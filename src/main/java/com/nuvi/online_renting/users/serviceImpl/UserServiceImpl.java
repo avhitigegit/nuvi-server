@@ -26,6 +26,11 @@ public class UserServiceImpl implements UserService {
     private UserRepository userRepository;
     private AuthenticationFacade authenticationFacade;
 
+    public UserServiceImpl(UserRepository userRepository, AuthenticationFacade authenticationFacade) {
+        this.userRepository = userRepository;
+        this.authenticationFacade = authenticationFacade;
+    }
+
 
     @Override
     @Transactional

@@ -1,6 +1,7 @@
 package com.nuvi.online_renting.users.controller;
 
 import com.nuvi.online_renting.common.dto.ApiResponse;
+import com.nuvi.online_renting.common.security.AuthenticationFacade;
 import com.nuvi.online_renting.users.dto.UserProfileRequest;
 import com.nuvi.online_renting.users.dto.UserProfileResponse;
 import com.nuvi.online_renting.users.dto.UserRequestDTO;
