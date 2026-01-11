@@ -14,14 +14,18 @@ public class RegisterRequest {
     @NotBlank
     @Size(min=6, max=100)
     private String password;
+    @NotBlank
+    @Size(min=10, max=10)
+    private String phone;
 
     public RegisterRequest() {
     }
 
-    public RegisterRequest(String name, String email, String password) {
+    public RegisterRequest(String name, String email, String password, String phone) {
         this.name = name;
         this.email = email;
         this.password = password;
+        this.phone = phone;
     }
 
     public String getName() {
@@ -46,5 +50,13 @@ public class RegisterRequest {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 }

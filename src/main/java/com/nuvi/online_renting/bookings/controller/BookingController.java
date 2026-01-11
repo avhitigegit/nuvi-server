@@ -4,12 +4,11 @@ import com.nuvi.online_renting.bookings.dto.BookingRequestDTO;
 import com.nuvi.online_renting.bookings.dto.BookingResponseDTO;
 import com.nuvi.online_renting.bookings.service.BookingService;
 import com.nuvi.online_renting.common.enums.BookingStatus;
+import com.nuvi.online_renting.common.security.AuthenticationFacade;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,10 +18,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BookingController {
     private final BookingService bookingService;
+    private final AuthenticationFacade authFacade;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('USER','SELLER')")
-    public ResponseEntity<BookingResponseDTO> createBooking(@RequestBody @Valid BookingRequestDTO bookingRequestDTO, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<BookingResponseDTO> createBooking(@RequestBody @Valid BookingRequestDTO bookingRequestDTO) {
+        Long userId = authFacade.getCurrentUser().getId();
+        bookingRequestDTO.setUserId(userId);
         return ResponseEntity.ok(bookingService.createBooking(bookingRequestDTO));
     }
 

@@ -8,7 +8,11 @@ import java.util.List;
 
 public interface SellerApplicationService {
 
-    SellerApplicationResponseDTO apply(Long userId, SellerApplicationRequestDTO dto, List<String> uploadedDocUrls);
+//    SellerApplicationResponseDTO apply(Long userId, SellerApplicationRequestDTO dto, List<String> uploadedDocUrls);
+
+    SellerApplicationResponseDTO apply(Long userId, SellerApplicationRequestDTO sellerApplicationRequestDTO);
+
+    void attachDocs(Long applicationId, List<String> uploadedDocUrls);
 
     SellerApplicationResponseDTO getById(Long id);
 

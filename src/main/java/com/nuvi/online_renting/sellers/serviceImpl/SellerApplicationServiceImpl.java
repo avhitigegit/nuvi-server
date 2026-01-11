@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,9 +26,37 @@ public class SellerApplicationServiceImpl implements SellerApplicationService {
     private final SellerApplicationRepository sellerApplicationRepository;
     private final UserRepository userRepository; // to fetch user
 
+//    @Override
+//    @Transactional
+//    public SellerApplicationResponseDTO apply(Long userId, SellerApplicationRequestDTO sellerApplicationRequestDTO, List<String> uploadedDocUrls) {
+//        User user = userRepository.findById(userId)
+//                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+//
+//        // If there's existing pending application, update it instead of creating new
+//        List<SellerApplication> existing = sellerApplicationRepository.findByUserId(userId);
+//        SellerApplication sellerApplication = existing.stream()
+//                .filter(sp -> sp.getStatus() == SellerStatus.PENDING || sp.getStatus() == SellerStatus.REQUEST_INFO)
+//                .findFirst().orElse(null);
+//
+//        if (sellerApplication == null) {
+//            sellerApplication = new SellerApplication();
+//            sellerApplication.setUser(user);
+//        }
+//
+//        sellerApplication.setBusinessName(sellerApplicationRequestDTO.getBusinessName());
+//        sellerApplication.setAddress(sellerApplicationRequestDTO.getAddress());
+//        sellerApplication.setIdNumber(sellerApplicationRequestDTO.getIdNumber());
+//        sellerApplication.setBankAccount(sellerApplicationRequestDTO.getBankAccount());
+//        sellerApplication.setDocumentUrls(uploadedDocUrls);
+//        sellerApplication.setStatus(SellerStatus.PENDING);
+//
+//        sellerApplication = sellerApplicationRepository.save(sellerApplication);
+//        return sellerApplicationToSellerApplicationResponseDTO(sellerApplication);
+//    }
+
     @Override
     @Transactional
-    public SellerApplicationResponseDTO apply(Long userId, SellerApplicationRequestDTO sellerApplicationRequestDTO, List<String> uploadedDocUrls) {
+    public SellerApplicationResponseDTO apply(Long userId, SellerApplicationRequestDTO sellerApplicationRequestDTO) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -46,11 +75,27 @@ public class SellerApplicationServiceImpl implements SellerApplicationService {
         sellerApplication.setAddress(sellerApplicationRequestDTO.getAddress());
         sellerApplication.setIdNumber(sellerApplicationRequestDTO.getIdNumber());
         sellerApplication.setBankAccount(sellerApplicationRequestDTO.getBankAccount());
-        sellerApplication.setDocumentUrls(uploadedDocUrls);
         sellerApplication.setStatus(SellerStatus.PENDING);
 
         sellerApplication = sellerApplicationRepository.save(sellerApplication);
         return sellerApplicationToSellerApplicationResponseDTO(sellerApplication);
+    }
+
+    @Override
+    @Transactional
+    public void attachDocs(Long applicationId, List<String> uploadedDocUrls) {
+        SellerApplication sellerApplication = sellerApplicationRepository.findById(applicationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Seller Application not found"));
+
+        // Append new docs to existing list
+        List<String> existingDocs = sellerApplication.getDocumentUrls();
+        if (existingDocs == null) {
+            existingDocs = new ArrayList<>();
+        }
+        existingDocs.addAll(uploadedDocUrls);
+
+        sellerApplication.setDocumentUrls(existingDocs);
+        sellerApplicationRepository.save(sellerApplication);
     }
 
     @Override
@@ -70,8 +115,13 @@ public class SellerApplicationServiceImpl implements SellerApplicationService {
 
     @Override
     public List<SellerApplicationResponseDTO> getByStatus(String status) {
-        SellerStatus st = SellerStatus.valueOf(status.toUpperCase());
-        List<SellerApplication> apps = sellerApplicationRepository.findByStatus(st);
+        List<SellerApplication> apps;
+        if (status == null) {
+            apps = sellerApplicationRepository.findAll();
+        } else {
+            SellerStatus st = SellerStatus.valueOf(status.toUpperCase());
+            apps = sellerApplicationRepository.findByStatus(st);
+        }
         return apps.stream()
                 .map(this::sellerApplicationToSellerApplicationResponseDTO)
                 .collect(Collectors.toList());

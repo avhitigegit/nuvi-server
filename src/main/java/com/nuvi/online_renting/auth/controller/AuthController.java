@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 public class AuthController {
 
     private final AuthenticationManager authManager;
@@ -53,13 +53,13 @@ public class AuthController {
         u.setEmail(req.getEmail());
         u.setPassword(passwordEncoder.encode(req.getPassword()));
         u.setRole(Role.USER);
+        u.setPhone(req.getPhone());
         u.setEnabled(true);
         userRepository.save(u);
         return ResponseEntity.ok("Registered");
     }
 
     @PostMapping("/login")
-    @PreAuthorize("hasAnyRole('USER','SELLER', 'ADMIN')")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest req) {
         authManager.authenticate(new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword()));
         UserDetails user = userDetailsService.loadUserByUsername(req.getEmail());
