@@ -35,7 +35,12 @@ public class Booking {
     private LocalDate endDate;
 
     @Column(nullable = false)
-    private String status; // e.g. PENDING, CONFIRMED, CANCELLED
+    private String status;
+
+    // Return tracking
+    private LocalDateTime returnedAt;
+
+    private String returnNote;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
@@ -98,6 +103,22 @@ public class Booking {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public LocalDateTime getReturnedAt() {
+        return returnedAt;
+    }
+
+    public void setReturnedAt(LocalDateTime returnedAt) {
+        this.returnedAt = returnedAt;
+    }
+
+    public String getReturnNote() {
+        return returnNote;
+    }
+
+    public void setReturnNote(String returnNote) {
+        this.returnNote = returnNote;
     }
 
     public LocalDateTime getCreatedAt() {

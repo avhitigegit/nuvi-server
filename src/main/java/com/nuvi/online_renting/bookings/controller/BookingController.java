@@ -65,4 +65,23 @@ public class BookingController {
                                                            @RequestParam BookingStatus bookingStatus) {
         return ResponseEntity.ok(bookingService.updateStatus(id, bookingStatus));
     }
+
+    // Admin: mark a confirmed booking as completed (item returned)
+    // PATCH /api/bookings/{id}/complete?returnNote=Good+condition
+    @PatchMapping("/{id}/complete")
+    @PreAuthorize("hasAuthority('UPDATE_BOOKING_STATUS')")
+    public ResponseEntity<BookingResponseDTO> completeBooking(@PathVariable Long id,
+                                                              @RequestParam(required = false) String returnNote) {
+        return ResponseEntity.ok(bookingService.completeBooking(id, returnNote));
+    }
+
+    // Seller/Admin: view active bookings on a specific item
+    // GET /api/bookings/item/{itemId}?page=0&size=10
+    @GetMapping("/item/{itemId}")
+    @PreAuthorize("hasAnyAuthority('UPDATE_OWN_ITEM', 'FULL_ACCESS')")
+    public ResponseEntity<PagedResponse<BookingResponseDTO>> getActiveBookingsByItem(
+            @PathVariable Long itemId,
+            @PageableDefault(size = 10, sort = "startDate") Pageable pageable) {
+        return ResponseEntity.ok(bookingService.getActiveBookingsByItem(itemId, pageable));
+    }
 }

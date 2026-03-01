@@ -18,5 +18,12 @@ public interface BookingService {
 
     void deleteBooking(Long id);
 
+    // Admin: PENDING→CONFIRMED, PENDING→CANCELLED, CONFIRMED→CANCELLED
     BookingResponseDTO updateStatus(Long id, BookingStatus bookingStatus);
+
+    // Admin: CONFIRMED → COMPLETED (item returned by renter)
+    BookingResponseDTO completeBooking(Long id, String returnNote);
+
+    // Seller/Admin: see active bookings on a specific item
+    PagedResponse<BookingResponseDTO> getActiveBookingsByItem(Long itemId, Pageable pageable);
 }

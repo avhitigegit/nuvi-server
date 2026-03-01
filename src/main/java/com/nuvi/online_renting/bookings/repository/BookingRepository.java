@@ -13,19 +13,24 @@ import java.time.LocalDate;
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, Long> {
 
+    // Exclude CANCELLED and COMPLETED — completed means item was returned
     @Query("SELECT COUNT(b) > 0 FROM Booking b " +
-            "WHERE b.item.id = :itemId " +
-            "AND b.status != 'CANCELLED' " +
-            "AND (b.startDate <= :endDate AND b.endDate >= :startDate)")
+           "WHERE b.item.id = :itemId " +
+           "AND b.status NOT IN ('CANCELLED', 'COMPLETED') " +
+           "AND (b.startDate <= :endDate AND b.endDate >= :startDate)")
     boolean existsOverlappingBooking(@Param("itemId") Long itemId,
                                      @Param("startDate") LocalDate startDate,
                                      @Param("endDate") LocalDate endDate);
 
-    // Filter by status and/or userId with pagination
     @Query("SELECT b FROM Booking b WHERE " +
-            "(:status IS NULL OR b.status = :status) AND " +
-            "(:userId IS NULL OR b.user.id = :userId)")
+           "(:status IS NULL OR b.status = :status) AND " +
+           "(:userId IS NULL OR b.user.id = :userId)")
     Page<Booking> filterBookings(@Param("status") String status,
                                  @Param("userId") Long userId,
                                  Pageable pageable);
+
+    // Find active (PENDING or CONFIRMED) bookings for a specific item — for sellers
+    @Query("SELECT b FROM Booking b WHERE b.item.id = :itemId " +
+           "AND b.status NOT IN ('CANCELLED', 'COMPLETED')")
+    Page<Booking> findActiveByItemId(@Param("itemId") Long itemId, Pageable pageable);
 }

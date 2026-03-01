@@ -17,6 +17,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
@@ -33,9 +35,11 @@ public class BookingServiceImpl implements BookingService {
         Item item = itemRepository.findById(dto.getItemId())
                 .orElseThrow(() -> new RuntimeException("Item not found"));
 
-        boolean conflict = bookingRepository.existsOverlappingBooking(
-                item.getId(), dto.getStartDate(), dto.getEndDate());
-        if (conflict) {
+        if (!item.isAvailable()) {
+            throw new RuntimeException("Item is not available for booking");
+        }
+
+        if (bookingRepository.existsOverlappingBooking(item.getId(), dto.getStartDate(), dto.getEndDate())) {
             throw new RuntimeException("Item already booked for this date range");
         }
 
@@ -46,20 +50,20 @@ public class BookingServiceImpl implements BookingService {
         booking.setEndDate(dto.getEndDate());
         booking.setStatus(BookingStatus.PENDING.name());
 
-        return convertToBookingResponseDTO(bookingRepository.save(booking));
+        return convertToDTO(bookingRepository.save(booking));
     }
 
     @Override
     public BookingResponseDTO getBookingById(Long id) {
         return bookingRepository.findById(id)
-                .map(this::convertToBookingResponseDTO)
+                .map(this::convertToDTO)
                 .orElseThrow(() -> new RuntimeException("Booking not found with id " + id));
     }
 
     @Override
     public PagedResponse<BookingResponseDTO> getAllBookings(String status, Long userId, Pageable pageable) {
         Page<Booking> page = bookingRepository.filterBookings(status, userId, pageable);
-        return new PagedResponse<>(page.map(this::convertToBookingResponseDTO));
+        return new PagedResponse<>(page.map(this::convertToDTO));
     }
 
     @Override
@@ -82,7 +86,7 @@ public class BookingServiceImpl implements BookingService {
         booking.setStartDate(dto.getStartDate());
         booking.setEndDate(dto.getEndDate());
 
-        return convertToBookingResponseDTO(bookingRepository.save(booking));
+        return convertToDTO(bookingRepository.save(booking));
     }
 
     @Override
@@ -93,31 +97,68 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
-    public BookingResponseDTO updateStatus(Long bookingId, BookingStatus bookingStatus) {
+    public BookingResponseDTO updateStatus(Long bookingId, BookingStatus newStatus) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
 
-        if (!BookingStatus.PENDING.name().equals(booking.getStatus())) {
-            throw new RuntimeException("Only PENDING bookings can be updated");
+        BookingStatus current = BookingStatus.valueOf(booking.getStatus());
+
+        // Allowed transitions
+        boolean allowed =
+                (current == BookingStatus.PENDING   && newStatus == BookingStatus.CONFIRMED) ||
+                (current == BookingStatus.PENDING   && newStatus == BookingStatus.CANCELLED) ||
+                (current == BookingStatus.CONFIRMED && newStatus == BookingStatus.CANCELLED);
+
+        if (!allowed) {
+            throw new RuntimeException(
+                    "Invalid transition: " + current.name() + " → " + newStatus.name()
+            );
         }
 
-        if (bookingStatus == BookingStatus.CONFIRMED || bookingStatus == BookingStatus.CANCELLED) {
-            booking.setStatus(bookingStatus.name());
-        } else {
-            throw new RuntimeException("Invalid status transition");
-        }
-
-        return convertToBookingResponseDTO(bookingRepository.save(booking));
+        booking.setStatus(newStatus.name());
+        return convertToDTO(bookingRepository.save(booking));
     }
 
-    private BookingResponseDTO convertToBookingResponseDTO(Booking booking) {
+    @Override
+    @Transactional
+    public BookingResponseDTO completeBooking(Long bookingId, String returnNote) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        if (!BookingStatus.CONFIRMED.name().equals(booking.getStatus())) {
+            throw new RuntimeException("Only CONFIRMED bookings can be marked as completed");
+        }
+
+        booking.setStatus(BookingStatus.COMPLETED.name());
+        booking.setReturnedAt(LocalDateTime.now());
+        booking.setReturnNote(returnNote);
+
+        // Mark item as available again after return
+        Item item = booking.getItem();
+        item.setAvailable(true);
+        itemRepository.save(item);
+
+        return convertToDTO(bookingRepository.save(booking));
+    }
+
+    @Override
+    public PagedResponse<BookingResponseDTO> getActiveBookingsByItem(Long itemId, Pageable pageable) {
+        Page<Booking> page = bookingRepository.findActiveByItemId(itemId, pageable);
+        return new PagedResponse<>(page.map(this::convertToDTO));
+    }
+
+    private BookingResponseDTO convertToDTO(Booking booking) {
         BookingResponseDTO dto = new BookingResponseDTO();
         dto.setId(booking.getId());
         dto.setUserId(booking.getUser().getId());
+        dto.setUserName(booking.getUser().getName());
         dto.setItemId(booking.getItem().getId());
+        dto.setItemName(booking.getItem().getName());
         dto.setStartDate(booking.getStartDate());
         dto.setEndDate(booking.getEndDate());
         dto.setStatus(booking.getStatus());
+        dto.setReturnedAt(booking.getReturnedAt());
+        dto.setReturnNote(booking.getReturnNote());
         dto.setCreatedAt(booking.getCreatedAt());
         dto.setUpdatedAt(booking.getUpdatedAt());
         dto.setCreatedBy(booking.getCreatedBy());
