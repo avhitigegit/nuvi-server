@@ -17,11 +17,12 @@ import java.util.List;
 @RequestMapping("/api/bookings")
 @RequiredArgsConstructor
 public class BookingController {
+
     private final BookingService bookingService;
     private final AuthenticationFacade authFacade;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('USER','SELLER')")
+    @PreAuthorize("hasAuthority('CREATE_BOOKING')")
     public ResponseEntity<BookingResponseDTO> createBooking(@RequestBody @Valid BookingRequestDTO bookingRequestDTO) {
         Long userId = authFacade.getCurrentUser().getId();
         bookingRequestDTO.setUserId(userId);
@@ -29,38 +30,36 @@ public class BookingController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('USER','SELLER', 'ADMIN')")
+    @PreAuthorize("hasAnyAuthority('VIEW_OWN_BOOKINGS', 'VIEW_ALL_BOOKINGS')")
     public ResponseEntity<BookingResponseDTO> getBookingById(@PathVariable Long id) {
         return ResponseEntity.ok(bookingService.getBookingById(id));
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('USER','SELLER', 'ADMIN')")
+    @PreAuthorize("hasAnyAuthority('VIEW_OWN_BOOKINGS', 'VIEW_ALL_BOOKINGS')")
     public ResponseEntity<List<BookingResponseDTO>> getAllBookings() {
         return ResponseEntity.ok(bookingService.getAllBookings());
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('USER','SELLER', 'ADMIN')")
+    @PreAuthorize("hasAnyAuthority('CREATE_BOOKING', 'FULL_ACCESS')")
     public ResponseEntity<BookingResponseDTO> updateBooking(@PathVariable Long id,
                                                             @RequestBody BookingRequestDTO bookingRequestDTO) {
         return ResponseEntity.ok(bookingService.updateBooking(id, bookingRequestDTO));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('USER','SELLER', 'ADMIN')")
+    @PreAuthorize("hasAnyAuthority('CANCEL_OWN_BOOKING', 'FULL_ACCESS')")
     public ResponseEntity<Void> deleteBooking(@PathVariable Long id) {
         bookingService.deleteBooking(id);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN')")
+    @PreAuthorize("hasAuthority('UPDATE_BOOKING_STATUS')")
     public ResponseEntity<BookingResponseDTO> updateStatus(
             @PathVariable Long id,
             @RequestParam BookingStatus bookingStatus) {
-
-        BookingResponseDTO response = bookingService.updateStatus(id, bookingStatus);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(bookingService.updateStatus(id, bookingStatus));
     }
 }
