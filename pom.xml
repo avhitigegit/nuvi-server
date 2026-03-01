@@ -28,6 +28,9 @@
 	</scm>
 	<properties>
 		<java.version>17</java.version>
+		<!-- Pin Spring Framework to 6.2.6 — springdoc-openapi 2.8.x is incompatible
+		     with the ControllerAdviceBean API change introduced in Spring 6.2.7+      -->
+		<spring-framework.version>6.2.6</spring-framework.version>
 	</properties>
 	<dependencies>
 		<dependency>
