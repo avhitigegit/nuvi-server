@@ -3,15 +3,16 @@ package com.nuvi.online_renting.bookings.controller;
 import com.nuvi.online_renting.bookings.dto.BookingRequestDTO;
 import com.nuvi.online_renting.bookings.dto.BookingResponseDTO;
 import com.nuvi.online_renting.bookings.service.BookingService;
+import com.nuvi.online_renting.common.dto.PagedResponse;
 import com.nuvi.online_renting.common.enums.BookingStatus;
 import com.nuvi.online_renting.common.security.AuthenticationFacade;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -23,10 +24,9 @@ public class BookingController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('CREATE_BOOKING')")
-    public ResponseEntity<BookingResponseDTO> createBooking(@RequestBody @Valid BookingRequestDTO bookingRequestDTO) {
-        Long userId = authFacade.getCurrentUser().getId();
-        bookingRequestDTO.setUserId(userId);
-        return ResponseEntity.ok(bookingService.createBooking(bookingRequestDTO));
+    public ResponseEntity<BookingResponseDTO> createBooking(@RequestBody @Valid BookingRequestDTO dto) {
+        dto.setUserId(authFacade.getCurrentUser().getId());
+        return ResponseEntity.ok(bookingService.createBooking(dto));
     }
 
     @GetMapping("/{id}")
@@ -35,17 +35,21 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getBookingById(id));
     }
 
+    // GET /api/bookings?status=PENDING&userId=3&page=0&size=10&sort=startDate,asc
     @GetMapping
     @PreAuthorize("hasAnyAuthority('VIEW_OWN_BOOKINGS', 'VIEW_ALL_BOOKINGS')")
-    public ResponseEntity<List<BookingResponseDTO>> getAllBookings() {
-        return ResponseEntity.ok(bookingService.getAllBookings());
+    public ResponseEntity<PagedResponse<BookingResponseDTO>> getAllBookings(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long userId,
+            @PageableDefault(size = 10, sort = "id") Pageable pageable) {
+        return ResponseEntity.ok(bookingService.getAllBookings(status, userId, pageable));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('CREATE_BOOKING', 'FULL_ACCESS')")
     public ResponseEntity<BookingResponseDTO> updateBooking(@PathVariable Long id,
-                                                            @RequestBody BookingRequestDTO bookingRequestDTO) {
-        return ResponseEntity.ok(bookingService.updateBooking(id, bookingRequestDTO));
+                                                            @RequestBody BookingRequestDTO dto) {
+        return ResponseEntity.ok(bookingService.updateBooking(id, dto));
     }
 
     @DeleteMapping("/{id}")
@@ -57,9 +61,8 @@ public class BookingController {
 
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAuthority('UPDATE_BOOKING_STATUS')")
-    public ResponseEntity<BookingResponseDTO> updateStatus(
-            @PathVariable Long id,
-            @RequestParam BookingStatus bookingStatus) {
+    public ResponseEntity<BookingResponseDTO> updateStatus(@PathVariable Long id,
+                                                           @RequestParam BookingStatus bookingStatus) {
         return ResponseEntity.ok(bookingService.updateStatus(id, bookingStatus));
     }
 }

@@ -1,18 +1,18 @@
 package com.nuvi.online_renting.item.serviceImpl;
 
-import com.nuvi.online_renting.common.security.AuthenticationFacade;
+import com.nuvi.online_renting.common.dto.PagedResponse;
 import com.nuvi.online_renting.common.enums.Role;
+import com.nuvi.online_renting.common.security.AuthenticationFacade;
 import com.nuvi.online_renting.item.dto.ItemRequestDTO;
 import com.nuvi.online_renting.item.dto.ItemResponseDTO;
 import com.nuvi.online_renting.item.model.Item;
 import com.nuvi.online_renting.item.repository.ItemRepository;
 import com.nuvi.online_renting.item.service.ItemService;
 import com.nuvi.online_renting.users.model.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class ItemServiceImpl implements ItemService {
@@ -35,7 +35,7 @@ public class ItemServiceImpl implements ItemService {
         item.setDescription(dto.getDescription());
         item.setPricePerDay(dto.getPricePerDay());
         item.setAvailable(dto.getAvailable() != null ? dto.getAvailable() : true);
-        item.setSeller(currentUser); // Auto-assign logged-in user as seller
+        item.setSeller(currentUser);
 
         return convertToResponseDTO(itemRepository.save(item));
     }
@@ -50,10 +50,10 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     @Transactional
-    public List<ItemResponseDTO> getAllItems() {
-        return itemRepository.findAll().stream()
-                .map(this::convertToResponseDTO)
-                .collect(Collectors.toList());
+    public PagedResponse<ItemResponseDTO> searchItems(String name, Double minPrice, Double maxPrice,
+                                                      Boolean available, Long sellerId, Pageable pageable) {
+        Page<Item> page = itemRepository.searchItems(name, minPrice, maxPrice, available, sellerId, pageable);
+        return new PagedResponse<>(page.map(this::convertToResponseDTO));
     }
 
     @Override
@@ -99,11 +99,10 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     @Transactional
-    public List<ItemResponseDTO> getMyItems() {
+    public PagedResponse<ItemResponseDTO> getMyItems(Pageable pageable) {
         Long sellerId = authFacade.getCurrentUser().getId();
-        return itemRepository.findBySellerId(sellerId).stream()
-                .map(this::convertToResponseDTO)
-                .collect(Collectors.toList());
+        Page<Item> page = itemRepository.findBySellerId(sellerId, pageable);
+        return new PagedResponse<>(page.map(this::convertToResponseDTO));
     }
 
     private ItemResponseDTO convertToResponseDTO(Item item) {
