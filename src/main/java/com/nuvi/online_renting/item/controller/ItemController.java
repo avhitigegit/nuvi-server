@@ -4,11 +4,20 @@ import com.nuvi.online_renting.common.dto.PagedResponse;
 import com.nuvi.online_renting.item.dto.ItemRequestDTO;
 import com.nuvi.online_renting.item.dto.ItemResponseDTO;
 import com.nuvi.online_renting.item.service.ItemService;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @RestController
 @RequestMapping("/api/items")
@@ -63,5 +72,39 @@ public class ItemController {
     public ResponseEntity<Void> deleteItem(@PathVariable Long id) {
         itemService.deleteItem(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // POST /api/items/{id}/image  (multipart/form-data, field name: "file")
+    @PostMapping("/{id}/image")
+    @PreAuthorize("hasAnyAuthority('UPDATE_OWN_ITEM', 'FULL_ACCESS')")
+    public ResponseEntity<ItemResponseDTO> uploadImage(@PathVariable Long id,
+                                                       @RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(itemService.uploadImage(id, file));
+    }
+
+    // GET /api/items/{id}/image
+    @GetMapping("/{id}/image")
+    public ResponseEntity<Resource> getImage(@PathVariable Long id) {
+        String imagePath = itemService.getImagePath(id);
+        if (imagePath == null || imagePath.isBlank()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Path filePath = Paths.get(imagePath);
+        Resource resource = new FileSystemResource(filePath);
+        if (!resource.exists()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String contentType;
+        try {
+            contentType = Files.probeContentType(filePath);
+        } catch (IOException e) {
+            contentType = "application/octet-stream";
+        }
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType != null ? contentType : "application/octet-stream"))
+                .body(resource);
     }
 }

@@ -9,16 +9,28 @@ import com.nuvi.online_renting.item.model.Item;
 import com.nuvi.online_renting.item.repository.ItemRepository;
 import com.nuvi.online_renting.item.service.ItemService;
 import com.nuvi.online_renting.users.model.User;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.List;
 
 @Service
 public class ItemServiceImpl implements ItemService {
 
     private final ItemRepository itemRepository;
     private final AuthenticationFacade authFacade;
+
+    @Value("${app.upload.dir}")
+    private String uploadDir;
 
     public ItemServiceImpl(ItemRepository itemRepository, AuthenticationFacade authFacade) {
         this.itemRepository = itemRepository;
@@ -105,6 +117,52 @@ public class ItemServiceImpl implements ItemService {
         return new PagedResponse<>(page.map(this::convertToResponseDTO));
     }
 
+    @Override
+    @Transactional
+    public ItemResponseDTO uploadImage(Long id, MultipartFile file) {
+        Item item = itemRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Item not found with id " + id));
+
+        User currentUser = authFacade.getCurrentUser();
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isOwner = item.getSeller().getId().equals(currentUser.getId());
+
+        if (!isAdmin && !isOwner) {
+            throw new RuntimeException("You are not allowed to upload an image for this item");
+        }
+
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || originalFilename.isBlank()) {
+            throw new RuntimeException("Invalid file name");
+        }
+
+        String ext = originalFilename.substring(originalFilename.lastIndexOf('.') + 1).toLowerCase();
+        if (!List.of("jpg", "jpeg", "png", "gif", "webp").contains(ext)) {
+            throw new RuntimeException("Only image files are allowed (jpg, jpeg, png, gif, webp)");
+        }
+
+        try {
+            Path uploadPath = Paths.get(uploadDir, "items");
+            Files.createDirectories(uploadPath);
+
+            String fileName = "item_" + id + "_" + System.currentTimeMillis() + "." + ext;
+            Path filePath = uploadPath.resolve(fileName);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            item.setImageUrl(filePath.toString());
+            return convertToResponseDTO(itemRepository.save(item));
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to store image: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public String getImagePath(Long id) {
+        return itemRepository.findById(id)
+                .map(Item::getImageUrl)
+                .orElseThrow(() -> new RuntimeException("Item not found with id " + id));
+    }
+
     private ItemResponseDTO convertToResponseDTO(Item item) {
         ItemResponseDTO dto = new ItemResponseDTO();
         dto.setId(item.getId());
@@ -114,6 +172,7 @@ public class ItemServiceImpl implements ItemService {
         dto.setAvailable(item.isAvailable());
         dto.setSellerId(item.getSeller().getId());
         dto.setSellerName(item.getSeller().getName());
+        dto.setImageUrl(item.getImageUrl());
         dto.setCreatedAt(item.getCreatedAt());
         dto.setUpdatedAt(item.getUpdatedAt());
         dto.setCreatedBy(item.getCreatedBy());

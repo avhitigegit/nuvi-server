@@ -17,6 +17,8 @@ public class ItemResponseDTO {
     private Long sellerId;
     private String sellerName;
 
+    private String imageUrl;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String createdBy;

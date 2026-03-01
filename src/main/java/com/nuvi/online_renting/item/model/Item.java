@@ -40,6 +40,9 @@ public class Item {
     @JoinColumn(name = "seller_id", nullable = false)
     private User seller;
 
+    // Stored file path on disk
+    private String imageUrl;
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -73,6 +76,9 @@ public class Item {
 
     public User getSeller() { return seller; }
     public void setSeller(User seller) { this.seller = seller; }
+
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
