@@ -80,6 +80,13 @@
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
 
+		<!-- Swagger / OpenAPI UI -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>2.5.0</version>
+		</dependency>
+
 		<!-- JWT (jjwt 0.11.x) -->
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
