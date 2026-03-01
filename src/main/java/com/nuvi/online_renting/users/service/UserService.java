@@ -1,5 +1,7 @@
 package com.nuvi.online_renting.users.service;
 
+import com.nuvi.online_renting.users.dto.UserProfileRequest;
+import com.nuvi.online_renting.users.dto.UserProfileResponse;
 import com.nuvi.online_renting.users.dto.UserRequestDTO;
 import com.nuvi.online_renting.users.dto.UserResponseDTO;
 
@@ -16,5 +18,11 @@ public interface UserService {
     UserResponseDTO updateUser(Long id, UserRequestDTO dto);
 
     void deleteUser(Long id);
+
+    UserProfileResponse getMyProfile();
+
+    UserProfileResponse updateMyProfile(UserProfileRequest userProfileRequest);
+
+    void deactivateMyAccount();
 
 }

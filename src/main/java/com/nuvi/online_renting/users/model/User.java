@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -37,6 +38,7 @@ public class User {
     @Column(nullable = false)
     private boolean enabled = true;
 
+    @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -49,6 +51,14 @@ public class User {
 
     @LastModifiedBy
     private String updatedBy;
+
+    // 🔹 Profile fields
+    private String phone;
+    private String address;
+    private String nicNumber; // or passport
+    private String profilePictureUrl;
+
+    private boolean kycVerified = false;
 
 //    public User() {
 //    }
@@ -143,5 +153,45 @@ public class User {
 
     public void setUpdatedBy(String updatedBy) {
         this.updatedBy = updatedBy;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getNicNumber() {
+        return nicNumber;
+    }
+
+    public void setNicNumber(String nicNumber) {
+        this.nicNumber = nicNumber;
+    }
+
+    public String getProfilePictureUrl() {
+        return profilePictureUrl;
+    }
+
+    public void setProfilePictureUrl(String profilePictureUrl) {
+        this.profilePictureUrl = profilePictureUrl;
+    }
+
+    public boolean isKycVerified() {
+        return kycVerified;
+    }
+
+    public void setKycVerified(boolean kycVerified) {
+        this.kycVerified = kycVerified;
     }
 }
