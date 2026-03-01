@@ -49,4 +49,11 @@ public class ItemController {
         itemService.deleteItem(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/my")
+    @PreAuthorize("hasAuthority('CREATE_ITEM')")
+    public ResponseEntity<List<ItemResponseDTO>> getMyItems() {
+        return ResponseEntity.ok(itemService.getMyItems());
+    }
+
 }

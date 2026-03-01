@@ -1,6 +1,6 @@
 package com.nuvi.online_renting.auth.service;
 
-import com.nuvi.online_renting.auth.model.CustomUserDetails;
+import com.nuvi.online_renting.common.security.CustomUserDetails;
 import com.nuvi.online_renting.users.model.User;
 import com.nuvi.online_renting.users.repository.UserRepository;
 import org.springframework.security.core.userdetails.UserDetails;

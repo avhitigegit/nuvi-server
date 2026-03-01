@@ -11,9 +11,14 @@ public class ItemResponseDTO {
     private String name;
     private String description;
     private Double pricePerDay;
+    private boolean available;
+
+    // Seller info
+    private Long sellerId;
+    private String sellerName;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String createdBy;
     private String updatedBy;
-
 }
