@@ -79,7 +79,7 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Booking not found with id " + id));
 
-        if (booking.getStatus() != BookingStatus.PENDING.toString()) {
+        if (!BookingStatus.PENDING.name().equals(booking.getStatus())) {
             throw new RuntimeException("Only PENDING bookings can be updated. Please Delete the booking and CREATE NEW");
         }
 
@@ -109,7 +109,7 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
 
-        if (booking.getStatus().toString() != BookingStatus.PENDING.toString()) {
+        if (!BookingStatus.PENDING.name().equals(booking.getStatus())) {
             throw new RuntimeException("Only PENDING bookings can be updated");
         }
 
