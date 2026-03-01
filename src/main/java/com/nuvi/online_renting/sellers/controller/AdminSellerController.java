@@ -16,17 +16,21 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/admin/sellers")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAuthority('MANAGE_SELLER_APPLICATIONS')")
 public class AdminSellerController {
+
     private final SellerApplicationService applicationService;
+
     @GetMapping("/applications")
-    public ResponseEntity<List<SellerApplicationResponseDTO>> list(@RequestParam(required = false) SellerStatus status) {
+    public ResponseEntity<List<SellerApplicationResponseDTO>> list(
+            @RequestParam(required = false) SellerStatus status) {
         return ResponseEntity.ok(applicationService.getByStatus(status == null ? null : status.name()));
     }
 
     @PatchMapping("/applications/{id}")
-    public ResponseEntity<SellerApplicationResponseDTO> decide(@PathVariable Long id,
-                                                               @Valid @RequestBody SellerDecisionDTO decision) {
+    public ResponseEntity<SellerApplicationResponseDTO> decide(
+            @PathVariable Long id,
+            @Valid @RequestBody SellerDecisionDTO decision) {
         String adminEmail = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(applicationService.decide(id, decision, adminEmail));
     }
