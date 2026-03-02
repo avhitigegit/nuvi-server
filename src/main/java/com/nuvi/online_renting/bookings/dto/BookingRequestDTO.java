@@ -1,5 +1,6 @@
 package com.nuvi.online_renting.bookings.dto;
 
+import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -10,12 +11,18 @@ public class BookingRequestDTO  {
 
     private Long id;
     private Long userId;
+
     @NotNull(message = "Item ID is required")
     private Long itemId;
+
     @NotNull(message = "Start date is required")
+    @FutureOrPresent(message = "Start date cannot be in the past")
     private LocalDate startDate;
+
     @NotNull(message = "End date is required")
+    @FutureOrPresent(message = "End date cannot be in the past")
     private LocalDate endDate;
+
     private String status;
 
     // getters & setters

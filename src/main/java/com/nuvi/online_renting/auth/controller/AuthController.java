@@ -9,6 +9,7 @@ import com.nuvi.online_renting.common.security.CustomUserDetails;
 import com.nuvi.online_renting.common.security.JwtTokenService;
 import com.nuvi.online_renting.users.model.User;
 import com.nuvi.online_renting.users.repository.UserRepository;
+import com.nuvi.online_renting.common.exceptions.ConflictException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -58,7 +59,7 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest req) {
         if (userRepository.existsByEmail(req.getEmail())) {
-            return ResponseEntity.badRequest().body("Email already in use");
+            throw new ConflictException("Email is already registered. Please use a different email or log in.");
         }
         User u = new User();
         u.setName(req.getName());

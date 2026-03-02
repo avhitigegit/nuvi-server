@@ -4,11 +4,13 @@ import jakarta.validation.constraints.NotBlank;
 
 public class SellerApplicationRequestDTO {
 
-    @NotBlank
+    @NotBlank(message = "Business name is required")
     private String businessName;
 
+    @NotBlank(message = "Business address is required")
     private String address;
 
+    @NotBlank(message = "ID number is required")
     private String idNumber;
 
     private String bankAccount;

@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
@@ -37,7 +38,7 @@ public class ItemController {
     @Operation(summary = "Create a new item listing", description = "Seller creates a new item available for rent. The logged-in seller is automatically set as the owner of the item. Requires SELLER or ADMIN role.")
     @PostMapping
     @PreAuthorize("hasAuthority('CREATE_ITEM')")
-    public ResponseEntity<ItemResponseDTO> createItem(@RequestBody ItemRequestDTO itemRequestDTO) {
+    public ResponseEntity<ItemResponseDTO> createItem(@Valid @RequestBody ItemRequestDTO itemRequestDTO) {
         return ResponseEntity.ok(itemService.createItem(itemRequestDTO));
     }
 
@@ -76,7 +77,7 @@ public class ItemController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('UPDATE_OWN_ITEM', 'FULL_ACCESS')")
     public ResponseEntity<ItemResponseDTO> updateItem(@PathVariable Long id,
-                                                      @RequestBody ItemRequestDTO itemRequestDTO) {
+                                                      @Valid @RequestBody ItemRequestDTO itemRequestDTO) {
         return ResponseEntity.ok(itemService.updateItem(id, itemRequestDTO));
     }
 

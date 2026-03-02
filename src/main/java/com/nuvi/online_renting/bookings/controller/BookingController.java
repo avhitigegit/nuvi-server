@@ -64,7 +64,7 @@ public class BookingController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('CREATE_BOOKING', 'FULL_ACCESS')")
     public ResponseEntity<BookingResponseDTO> updateBooking(@PathVariable Long id,
-                                                            @RequestBody BookingRequestDTO dto) {
+                                                            @Valid @RequestBody BookingRequestDTO dto) {
         return ResponseEntity.ok(bookingService.updateBooking(id, dto));
     }
 

@@ -7,6 +7,12 @@ import com.nuvi.online_renting.bookings.repository.BookingRepository;
 import com.nuvi.online_renting.bookings.service.BookingService;
 import com.nuvi.online_renting.common.dto.PagedResponse;
 import com.nuvi.online_renting.common.enums.BookingStatus;
+import com.nuvi.online_renting.common.enums.Role;
+import com.nuvi.online_renting.common.exceptions.BadRequestException;
+import com.nuvi.online_renting.common.exceptions.ConflictException;
+import com.nuvi.online_renting.common.exceptions.ForbiddenException;
+import com.nuvi.online_renting.common.exceptions.ResourceNotFoundException;
+import com.nuvi.online_renting.common.security.AuthenticationFacade;
 import com.nuvi.online_renting.item.model.Item;
 import com.nuvi.online_renting.item.repository.ItemRepository;
 import com.nuvi.online_renting.users.model.User;
@@ -26,21 +32,22 @@ public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final ItemRepository itemRepository;
+    private final AuthenticationFacade authFacade;
 
     @Override
     @Transactional
     public BookingResponseDTO createBooking(BookingRequestDTO dto) {
         User user = userRepository.findById(dto.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id " + dto.getUserId()));
         Item item = itemRepository.findById(dto.getItemId())
-                .orElseThrow(() -> new RuntimeException("Item not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found with id " + dto.getItemId()));
 
         if (!item.isAvailable()) {
-            throw new RuntimeException("Item is not available for booking");
+            throw new BadRequestException("Item is not available for booking");
         }
 
         if (bookingRepository.existsOverlappingBooking(item.getId(), dto.getStartDate(), dto.getEndDate())) {
-            throw new RuntimeException("Item already booked for this date range");
+            throw new ConflictException("Item is already booked for the selected date range");
         }
 
         Booking booking = new Booking();
@@ -55,13 +62,30 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public BookingResponseDTO getBookingById(Long id) {
-        return bookingRepository.findById(id)
-                .map(this::convertToDTO)
-                .orElseThrow(() -> new RuntimeException("Booking not found with id " + id));
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id " + id));
+
+        // GAP 3: Ownership check — user can only view their own booking; admin can view any
+        User currentUser = authFacade.getCurrentUser();
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isOwner = booking.getUser().getId().equals(currentUser.getId());
+
+        if (!isAdmin && !isOwner) {
+            throw new ForbiddenException("You are not allowed to view this booking");
+        }
+
+        return convertToDTO(booking);
     }
 
     @Override
     public PagedResponse<BookingResponseDTO> getAllBookings(String status, Long userId, Pageable pageable) {
+        User currentUser = authFacade.getCurrentUser();
+
+        // Non-admin users can only see their own bookings regardless of userId param
+        if (currentUser.getRole() != Role.ADMIN) {
+            userId = currentUser.getId();
+        }
+
         Page<Booking> page = bookingRepository.filterBookings(status, userId, pageable);
         return new PagedResponse<>(page.map(this::convertToDTO));
     }
@@ -70,16 +94,16 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public BookingResponseDTO updateBooking(Long id, BookingRequestDTO dto) {
         Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Booking not found with id " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id " + id));
 
         if (!BookingStatus.PENDING.name().equals(booking.getStatus())) {
-            throw new RuntimeException("Only PENDING bookings can be updated");
+            throw new BadRequestException("Only PENDING bookings can be updated");
         }
 
         User user = userRepository.findById(dto.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id " + dto.getUserId()));
         Item item = itemRepository.findById(dto.getItemId())
-                .orElseThrow(() -> new RuntimeException("Item not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found with id " + dto.getItemId()));
 
         booking.setUser(user);
         booking.setItem(item);
@@ -92,6 +116,9 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public void deleteBooking(Long id) {
+        if (!bookingRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Booking not found with id " + id);
+        }
         bookingRepository.deleteById(id);
     }
 
@@ -99,19 +126,19 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public BookingResponseDTO updateStatus(Long bookingId, BookingStatus newStatus) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id " + bookingId));
 
         BookingStatus current = BookingStatus.valueOf(booking.getStatus());
 
-        // Allowed transitions
         boolean allowed =
                 (current == BookingStatus.PENDING   && newStatus == BookingStatus.CONFIRMED) ||
                 (current == BookingStatus.PENDING   && newStatus == BookingStatus.CANCELLED) ||
                 (current == BookingStatus.CONFIRMED && newStatus == BookingStatus.CANCELLED);
 
         if (!allowed) {
-            throw new RuntimeException(
-                    "Invalid transition: " + current.name() + " → " + newStatus.name()
+            throw new BadRequestException(
+                    "Invalid status transition: " + current.name() + " → " + newStatus.name() +
+                    ". Allowed: PENDING→CONFIRMED, PENDING→CANCELLED, CONFIRMED→CANCELLED"
             );
         }
 
@@ -123,17 +150,16 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public BookingResponseDTO completeBooking(Long bookingId, String returnNote) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id " + bookingId));
 
         if (!BookingStatus.CONFIRMED.name().equals(booking.getStatus())) {
-            throw new RuntimeException("Only CONFIRMED bookings can be marked as completed");
+            throw new BadRequestException("Only CONFIRMED bookings can be marked as completed");
         }
 
         booking.setStatus(BookingStatus.COMPLETED.name());
         booking.setReturnedAt(LocalDateTime.now());
         booking.setReturnNote(returnNote);
 
-        // Mark item as available again after return
         Item item = booking.getItem();
         item.setAvailable(true);
         itemRepository.save(item);

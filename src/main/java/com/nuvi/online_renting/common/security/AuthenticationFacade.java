@@ -1,5 +1,6 @@
 package com.nuvi.online_renting.common.security;
 
+import com.nuvi.online_renting.common.exceptions.ResourceNotFoundException;
 import com.nuvi.online_renting.users.model.User;
 import com.nuvi.online_renting.users.repository.UserRepository;
 import org.springframework.security.core.Authentication;
@@ -26,6 +27,6 @@ public class AuthenticationFacade {
         }
         String email = authentication.getName(); // username is email
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found: " + email));
+                .orElseThrow(() -> new ResourceNotFoundException("Authenticated user not found: " + email));
     }
 }

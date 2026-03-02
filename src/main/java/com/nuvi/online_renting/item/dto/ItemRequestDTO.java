@@ -10,6 +10,8 @@ public class ItemRequestDTO {
     private Long id;
     @NotBlank(message = "Item name cannot be empty")
     private String name;
+
+    @NotBlank(message = "Item description cannot be empty")
     private String description;
     @NotNull(message = "Price per day is required")
     @Positive(message = "Price must be greater than 0")

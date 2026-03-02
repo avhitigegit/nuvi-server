@@ -2,6 +2,9 @@ package com.nuvi.online_renting.item.serviceImpl;
 
 import com.nuvi.online_renting.common.dto.PagedResponse;
 import com.nuvi.online_renting.common.enums.Role;
+import com.nuvi.online_renting.common.exceptions.BadRequestException;
+import com.nuvi.online_renting.common.exceptions.ForbiddenException;
+import com.nuvi.online_renting.common.exceptions.ResourceNotFoundException;
 import com.nuvi.online_renting.common.security.AuthenticationFacade;
 import com.nuvi.online_renting.item.dto.ItemRequestDTO;
 import com.nuvi.online_renting.item.dto.ItemResponseDTO;
@@ -57,7 +60,7 @@ public class ItemServiceImpl implements ItemService {
     public ItemResponseDTO getItemById(Long id) {
         return itemRepository.findById(id)
                 .map(this::convertToResponseDTO)
-                .orElseThrow(() -> new RuntimeException("Item not found with id " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found with id " + id));
     }
 
     @Override
@@ -72,14 +75,14 @@ public class ItemServiceImpl implements ItemService {
     @Transactional
     public ItemResponseDTO updateItem(Long id, ItemRequestDTO dto) {
         Item item = itemRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Item not found with id " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found with id " + id));
 
         User currentUser = authFacade.getCurrentUser();
         boolean isAdmin = currentUser.getRole() == Role.ADMIN;
         boolean isOwner = item.getSeller().getId().equals(currentUser.getId());
 
         if (!isAdmin && !isOwner) {
-            throw new RuntimeException("You are not allowed to update this item");
+            throw new ForbiddenException("You are not allowed to update this item");
         }
 
         item.setName(dto.getName());
@@ -96,14 +99,14 @@ public class ItemServiceImpl implements ItemService {
     @Transactional
     public void deleteItem(Long id) {
         Item item = itemRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Item not found with id " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found with id " + id));
 
         User currentUser = authFacade.getCurrentUser();
         boolean isAdmin = currentUser.getRole() == Role.ADMIN;
         boolean isOwner = item.getSeller().getId().equals(currentUser.getId());
 
         if (!isAdmin && !isOwner) {
-            throw new RuntimeException("You are not allowed to delete this item");
+            throw new ForbiddenException("You are not allowed to delete this item");
         }
 
         itemRepository.deleteById(id);
@@ -121,24 +124,24 @@ public class ItemServiceImpl implements ItemService {
     @Transactional
     public ItemResponseDTO uploadImage(Long id, MultipartFile file) {
         Item item = itemRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Item not found with id " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found with id " + id));
 
         User currentUser = authFacade.getCurrentUser();
         boolean isAdmin = currentUser.getRole() == Role.ADMIN;
         boolean isOwner = item.getSeller().getId().equals(currentUser.getId());
 
         if (!isAdmin && !isOwner) {
-            throw new RuntimeException("You are not allowed to upload an image for this item");
+            throw new ForbiddenException("You are not allowed to upload an image for this item");
         }
 
         String originalFilename = file.getOriginalFilename();
         if (originalFilename == null || originalFilename.isBlank()) {
-            throw new RuntimeException("Invalid file name");
+            throw new BadRequestException("Invalid file name");
         }
 
         String ext = originalFilename.substring(originalFilename.lastIndexOf('.') + 1).toLowerCase();
         if (!List.of("jpg", "jpeg", "png", "gif", "webp").contains(ext)) {
-            throw new RuntimeException("Only image files are allowed (jpg, jpeg, png, gif, webp)");
+            throw new BadRequestException("Only image files are allowed (jpg, jpeg, png, gif, webp)");
         }
 
         try {
@@ -160,7 +163,7 @@ public class ItemServiceImpl implements ItemService {
     public String getImagePath(Long id) {
         return itemRepository.findById(id)
                 .map(Item::getImageUrl)
-                .orElseThrow(() -> new RuntimeException("Item not found with id " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found with id " + id));
     }
 
     private ItemResponseDTO convertToResponseDTO(Item item) {
