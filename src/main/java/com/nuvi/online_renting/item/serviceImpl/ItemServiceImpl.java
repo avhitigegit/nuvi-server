@@ -6,24 +6,19 @@ import com.nuvi.online_renting.common.exceptions.BadRequestException;
 import com.nuvi.online_renting.common.exceptions.ForbiddenException;
 import com.nuvi.online_renting.common.exceptions.ResourceNotFoundException;
 import com.nuvi.online_renting.common.security.AuthenticationFacade;
+import com.nuvi.online_renting.common.storage.S3StorageService;
 import com.nuvi.online_renting.item.dto.ItemRequestDTO;
 import com.nuvi.online_renting.item.dto.ItemResponseDTO;
 import com.nuvi.online_renting.item.model.Item;
 import com.nuvi.online_renting.item.repository.ItemRepository;
 import com.nuvi.online_renting.item.service.ItemService;
 import com.nuvi.online_renting.users.model.User;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.List;
 
 @Service
@@ -31,13 +26,14 @@ public class ItemServiceImpl implements ItemService {
 
     private final ItemRepository itemRepository;
     private final AuthenticationFacade authFacade;
+    private final S3StorageService s3StorageService;
 
-    @Value("${app.upload.dir}")
-    private String uploadDir;
-
-    public ItemServiceImpl(ItemRepository itemRepository, AuthenticationFacade authFacade) {
+    public ItemServiceImpl(ItemRepository itemRepository,
+                           AuthenticationFacade authFacade,
+                           S3StorageService s3StorageService) {
         this.itemRepository = itemRepository;
         this.authFacade = authFacade;
+        this.s3StorageService = s3StorageService;
     }
 
     @Override
@@ -144,19 +140,11 @@ public class ItemServiceImpl implements ItemService {
             throw new BadRequestException("Only image files are allowed (jpg, jpeg, png, gif, webp)");
         }
 
-        try {
-            Path uploadPath = Paths.get(uploadDir, "items");
-            Files.createDirectories(uploadPath);
+        String s3Key = "items/item_" + id + "_" + System.currentTimeMillis() + "." + ext;
+        String imageUrl = s3StorageService.uploadFile(s3Key, file);
 
-            String fileName = "item_" + id + "_" + System.currentTimeMillis() + "." + ext;
-            Path filePath = uploadPath.resolve(fileName);
-            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-            item.setImageUrl(filePath.toString());
-            return convertToResponseDTO(itemRepository.save(item));
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to store image: " + e.getMessage());
-        }
+        item.setImageUrl(imageUrl);
+        return convertToResponseDTO(itemRepository.save(item));
     }
 
     @Override

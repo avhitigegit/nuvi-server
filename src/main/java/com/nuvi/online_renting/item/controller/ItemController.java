@@ -9,20 +9,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 @RestController
 @RequestMapping("/api/items")
@@ -102,29 +96,16 @@ public class ItemController {
         return ResponseEntity.ok(itemService.uploadImage(id, file));
     }
 
-    @Operation(summary = "Get item image", description = "Returns the uploaded image file for the given item. No authentication required. Returns 404 if no image has been uploaded yet.")
+    @Operation(summary = "Get item image", description = "Redirects to the item's image URL stored in AWS S3. No authentication required. Returns 404 if no image has been uploaded yet.")
     @GetMapping("/{id}/image")
-    public ResponseEntity<Resource> getImage(@PathVariable Long id) {
-        String imagePath = itemService.getImagePath(id);
-        if (imagePath == null || imagePath.isBlank()) {
+    public ResponseEntity<Void> getImage(@PathVariable Long id) {
+        String imageUrl = itemService.getImagePath(id);
+        if (imageUrl == null || imageUrl.isBlank()) {
             return ResponseEntity.notFound().build();
         }
 
-        Path filePath = Paths.get(imagePath);
-        Resource resource = new FileSystemResource(filePath);
-        if (!resource.exists()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        String contentType;
-        try {
-            contentType = Files.probeContentType(filePath);
-        } catch (IOException e) {
-            contentType = "application/octet-stream";
-        }
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(contentType != null ? contentType : "application/octet-stream"))
-                .body(resource);
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.LOCATION, imageUrl);
+        return ResponseEntity.status(HttpStatus.FOUND).headers(headers).build();
     }
 }
