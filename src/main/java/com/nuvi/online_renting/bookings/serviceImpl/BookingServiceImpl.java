@@ -18,6 +18,8 @@ import com.nuvi.online_renting.item.repository.ItemRepository;
 import com.nuvi.online_renting.users.model.User;
 import com.nuvi.online_renting.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,8 @@ import java.time.LocalDateTime;
 @Service
 @RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
+
+    private static final Logger log = LoggerFactory.getLogger(BookingServiceImpl.class);
 
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
@@ -41,6 +45,10 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id " + dto.getUserId()));
         Item item = itemRepository.findById(dto.getItemId())
                 .orElseThrow(() -> new ResourceNotFoundException("Item not found with id " + dto.getItemId()));
+
+        if (!dto.getEndDate().isAfter(dto.getStartDate())) {
+            throw new BadRequestException("End date must be after start date");
+        }
 
         if (!item.isAvailable()) {
             throw new BadRequestException("Item is not available for booking");
@@ -57,7 +65,9 @@ public class BookingServiceImpl implements BookingService {
         booking.setEndDate(dto.getEndDate());
         booking.setStatus(BookingStatus.PENDING.name());
 
-        return convertToDTO(bookingRepository.save(booking));
+        BookingResponseDTO result = convertToDTO(bookingRepository.save(booking));
+        log.info("Booking {} created by user {} for item {}", result.getId(), dto.getUserId(), dto.getItemId());
+        return result;
     }
 
     @Override
@@ -96,16 +106,21 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id " + id));
 
+        User currentUser = authFacade.getCurrentUser();
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isOwner = booking.getUser().getId().equals(currentUser.getId());
+
+        if (!isAdmin && !isOwner) {
+            throw new ForbiddenException("You are not allowed to update this booking");
+        }
+
         if (!BookingStatus.PENDING.name().equals(booking.getStatus())) {
             throw new BadRequestException("Only PENDING bookings can be updated");
         }
 
-        User user = userRepository.findById(dto.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id " + dto.getUserId()));
         Item item = itemRepository.findById(dto.getItemId())
                 .orElseThrow(() -> new ResourceNotFoundException("Item not found with id " + dto.getItemId()));
 
-        booking.setUser(user);
         booking.setItem(item);
         booking.setStartDate(dto.getStartDate());
         booking.setEndDate(dto.getEndDate());
@@ -116,10 +131,21 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public void deleteBooking(Long id) {
-        if (!bookingRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Booking not found with id " + id);
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id " + id));
+
+        User currentUser = authFacade.getCurrentUser();
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isOwner = booking.getUser().getId().equals(currentUser.getId());
+
+        if (!isAdmin && !isOwner) {
+            throw new ForbiddenException("You are not allowed to delete this booking");
         }
-        bookingRepository.deleteById(id);
+
+        booking.setDeleted(true);
+        booking.setDeletedAt(java.time.LocalDateTime.now());
+        bookingRepository.save(booking);
+        log.info("Booking {} soft-deleted by user {}", id, currentUser.getEmail());
     }
 
     @Override
@@ -143,6 +169,7 @@ public class BookingServiceImpl implements BookingService {
         }
 
         booking.setStatus(newStatus.name());
+        log.info("Booking {} status changed: {} → {}", bookingId, current.name(), newStatus.name());
         return convertToDTO(bookingRepository.save(booking));
     }
 

@@ -19,6 +19,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.net.URLConnection;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -105,7 +109,9 @@ public class ItemServiceImpl implements ItemService {
             throw new ForbiddenException("You are not allowed to delete this item");
         }
 
-        itemRepository.deleteById(id);
+        item.setDeleted(true);
+        item.setDeletedAt(LocalDateTime.now());
+        itemRepository.save(item);
     }
 
     @Override
@@ -138,6 +144,16 @@ public class ItemServiceImpl implements ItemService {
         String ext = originalFilename.substring(originalFilename.lastIndexOf('.') + 1).toLowerCase();
         if (!List.of("jpg", "jpeg", "png", "gif", "webp").contains(ext)) {
             throw new BadRequestException("Only image files are allowed (jpg, jpeg, png, gif, webp)");
+        }
+
+        // Validate actual file content — prevents renamed executables from being uploaded
+        try (BufferedInputStream bis = new BufferedInputStream(file.getInputStream())) {
+            String detectedMime = URLConnection.guessContentTypeFromStream(bis);
+            if (detectedMime == null || !detectedMime.startsWith("image/")) {
+                throw new BadRequestException("File content does not match an image type. Upload aborted.");
+            }
+        } catch (IOException e) {
+            throw new BadRequestException("Could not read file content for validation.");
         }
 
         String s3Key = "items/item_" + id + "_" + System.currentTimeMillis() + "." + ext;

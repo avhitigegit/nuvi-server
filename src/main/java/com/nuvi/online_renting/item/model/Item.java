@@ -4,6 +4,7 @@ import com.nuvi.online_renting.users.model.User;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import org.hibernate.annotations.SQLRestriction;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "items")
 @EntityListeners(AuditingEntityListener.class)
+@SQLRestriction("deleted = false")
 public class Item {
 
     @Id
@@ -57,6 +59,12 @@ public class Item {
     @LastModifiedBy
     private String updatedBy;
 
+    // Soft delete
+    @Column(nullable = false)
+    private boolean deleted = false;
+
+    private LocalDateTime deletedAt;
+
     // Getters and Setters
 
     public Long getId() { return id; }
@@ -91,4 +99,10 @@ public class Item {
 
     public String getUpdatedBy() { return updatedBy; }
     public void setUpdatedBy(String updatedBy) { this.updatedBy = updatedBy; }
+
+    public boolean isDeleted() { return deleted; }
+    public void setDeleted(boolean deleted) { this.deleted = deleted; }
+
+    public LocalDateTime getDeletedAt() { return deletedAt; }
+    public void setDeletedAt(LocalDateTime deletedAt) { this.deletedAt = deletedAt; }
 }

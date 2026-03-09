@@ -20,6 +20,8 @@ import com.nuvi.online_renting.common.security.CustomUserDetails;
 import com.nuvi.online_renting.common.security.JwtTokenService;
 import com.nuvi.online_renting.users.model.User;
 import com.nuvi.online_renting.users.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -35,6 +37,8 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/auth")
 @Tag(name = "Authentication", description = "Endpoints to register, log in, refresh access tokens, and log out.")
 public class AuthController {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
@@ -87,6 +91,7 @@ public class AuthController {
         u.setPhone(req.getPhone());
         u.setEnabled(true);
         userRepository.save(u);
+        log.info("New user registered: {}", req.getEmail());
         return ResponseEntity.ok(new ApiResponse<>(true, "Registration successful. You can now log in.", null));
     }
 
@@ -107,6 +112,7 @@ public class AuthController {
         // Create (or replace) the refresh token for this user
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(userDetails.getUser());
 
+        log.info("User logged in: {}", req.getEmail());
         return ResponseEntity.ok(new AuthResponse(
                 accessToken,
                 jwtTokenService.getExpirationMs(),
@@ -153,6 +159,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> logout() {
         User currentUser = authFacade.getCurrentUser();
         refreshTokenService.deleteByUser(currentUser);
+        log.info("User logged out: {}", currentUser.getEmail());
         return ResponseEntity.ok(new ApiResponse<>(true, "Logged out successfully. Refresh token has been invalidated.", null));
     }
 

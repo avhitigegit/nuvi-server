@@ -4,6 +4,7 @@ import com.nuvi.online_renting.common.enums.Role;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import org.hibernate.annotations.SQLRestriction;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "users", uniqueConstraints = @UniqueConstraint(columnNames = "email"))
 @EntityListeners(AuditingEntityListener.class)
+@SQLRestriction("deleted = false")
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -59,6 +61,12 @@ public class User {
     private String profilePictureUrl;
 
     private boolean kycVerified = false;
+
+    // Soft delete — record is never physically removed from DB
+    @Column(nullable = false)
+    private boolean deleted = false;
+
+    private LocalDateTime deletedAt;
 
 //    public User() {
 //    }
@@ -194,4 +202,10 @@ public class User {
     public void setKycVerified(boolean kycVerified) {
         this.kycVerified = kycVerified;
     }
+
+    public boolean isDeleted() { return deleted; }
+    public void setDeleted(boolean deleted) { this.deleted = deleted; }
+
+    public LocalDateTime getDeletedAt() { return deletedAt; }
+    public void setDeletedAt(LocalDateTime deletedAt) { this.deletedAt = deletedAt; }
 }

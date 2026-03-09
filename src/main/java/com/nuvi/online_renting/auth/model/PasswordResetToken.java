@@ -2,6 +2,8 @@ package com.nuvi.online_renting.auth.model;
 
 import com.nuvi.online_renting.users.model.User;
 import jakarta.persistence.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.Instant;
 
@@ -19,6 +21,7 @@ public class PasswordResetToken {
     // One reset token per user — old one is deleted when a new one is requested
     @OneToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User user;
 
     // Expiry: 15 minutes by default

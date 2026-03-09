@@ -2,6 +2,8 @@ package com.nuvi.online_renting.auth.model;
 
 import com.nuvi.online_renting.users.model.User;
 import jakarta.persistence.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.Instant;
 
@@ -20,6 +22,7 @@ public class RefreshToken {
     // One refresh token per user — old one is deleted on each new login
     @OneToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User user;
 
     // Absolute expiry time — 7 days by default

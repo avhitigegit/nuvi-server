@@ -97,6 +97,20 @@
 			<version>2.25.60</version>
 		</dependency>
 
+		<!-- Rate Limiting -->
+		<dependency>
+			<groupId>com.bucket4j</groupId>
+			<artifactId>bucket4j-core</artifactId>
+			<version>8.10.1</version>
+		</dependency>
+
+		<!-- Dotenv — auto-loads .env file into Spring environment -->
+		<dependency>
+			<groupId>me.paulschwarz</groupId>
+			<artifactId>spring-dotenv</artifactId>
+			<version>4.0.0</version>
+		</dependency>
+
 		<!-- Email -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

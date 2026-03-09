@@ -2,7 +2,9 @@ package com.nuvi.online_renting.sellers.serviceImpl;
 
 import com.nuvi.online_renting.common.enums.Role;
 import com.nuvi.online_renting.common.enums.SellerStatus;
+import com.nuvi.online_renting.common.exceptions.ForbiddenException;
 import com.nuvi.online_renting.common.exceptions.ResourceNotFoundException;
+import com.nuvi.online_renting.common.security.AuthenticationFacade;
 import com.nuvi.online_renting.sellers.dto.SellerApplicationRequestDTO;
 import com.nuvi.online_renting.sellers.dto.SellerApplicationResponseDTO;
 import com.nuvi.online_renting.sellers.dto.SellerDecisionDTO;
@@ -12,6 +14,8 @@ import com.nuvi.online_renting.sellers.service.SellerApplicationService;
 import com.nuvi.online_renting.users.model.User;
 import com.nuvi.online_renting.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,8 +27,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SellerApplicationServiceImpl implements SellerApplicationService {
 
+    private static final Logger log = LoggerFactory.getLogger(SellerApplicationServiceImpl.class);
+
     private final SellerApplicationRepository sellerApplicationRepository;
-    private final UserRepository userRepository; // to fetch user
+    private final UserRepository userRepository;
+    private final AuthenticationFacade authFacade;
 
 //    @Override
 //    @Transactional
@@ -78,7 +85,9 @@ public class SellerApplicationServiceImpl implements SellerApplicationService {
         sellerApplication.setStatus(SellerStatus.PENDING);
 
         sellerApplication = sellerApplicationRepository.save(sellerApplication);
-        return sellerApplicationToSellerApplicationResponseDTO(sellerApplication);
+        log.info("Seller application submitted by user {}", userId);
+        // Owner creating their own application — mask sensitive fields
+        return sellerApplicationToSellerApplicationResponseDTO(sellerApplication, false);
     }
 
     @Override
@@ -102,14 +111,24 @@ public class SellerApplicationServiceImpl implements SellerApplicationService {
     public SellerApplicationResponseDTO getById(Long id) {
         SellerApplication sellerApplication = sellerApplicationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
-        return sellerApplicationToSellerApplicationResponseDTO(sellerApplication);
+
+        User currentUser = authFacade.getCurrentUser();
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isOwner = sellerApplication.getUser().getId().equals(currentUser.getId());
+
+        if (!isAdmin && !isOwner) {
+            throw new ForbiddenException("You are not allowed to view this application");
+        }
+
+        return sellerApplicationToSellerApplicationResponseDTO(sellerApplication, isAdmin);
     }
 
     @Override
     public List<SellerApplicationResponseDTO> getMine(Long userId) {
         List<SellerApplication> apps = sellerApplicationRepository.findByUserId(userId);
+        // Owner sees their own applications — sensitive fields are masked
         return apps.stream()
-                .map(this::sellerApplicationToSellerApplicationResponseDTO)
+                .map(app -> sellerApplicationToSellerApplicationResponseDTO(app, false))
                 .collect(Collectors.toList());
     }
 
@@ -122,8 +141,9 @@ public class SellerApplicationServiceImpl implements SellerApplicationService {
             SellerStatus st = SellerStatus.valueOf(status.toUpperCase());
             apps = sellerApplicationRepository.findByStatus(st);
         }
+        // Admin-only endpoint — return full unmasked data
         return apps.stream()
-                .map(this::sellerApplicationToSellerApplicationResponseDTO)
+                .map(app -> sellerApplicationToSellerApplicationResponseDTO(app, true))
                 .collect(Collectors.toList());
     }
 
@@ -142,22 +162,50 @@ public class SellerApplicationServiceImpl implements SellerApplicationService {
             userRepository.save(user);
         }
         sellerApplication = sellerApplicationRepository.save(sellerApplication);
-        return sellerApplicationToSellerApplicationResponseDTO(sellerApplication);
+        log.info("Seller application {} decided by {}: status={}", id, adminEmail, decision.getStatus());
+        // Admin decision — return full unmasked data
+        return sellerApplicationToSellerApplicationResponseDTO(sellerApplication, true);
     }
 
-    private SellerApplicationResponseDTO sellerApplicationToSellerApplicationResponseDTO(SellerApplication sellerApplication) {
-        SellerApplicationResponseDTO sellerApplicationRequestDTO = new SellerApplicationResponseDTO();
-        sellerApplicationRequestDTO.setId(sellerApplication.getId());
-        sellerApplicationRequestDTO.setUserId(sellerApplication.getUser().getId());
-        sellerApplicationRequestDTO.setBusinessName(sellerApplication.getBusinessName());
-        sellerApplicationRequestDTO.setAddress(sellerApplication.getAddress());
-        sellerApplicationRequestDTO.setIdNumber(sellerApplication.getIdNumber());
-        sellerApplicationRequestDTO.setBankAccount(sellerApplication.getBankAccount());
-        sellerApplicationRequestDTO.setDocumentUrls(sellerApplication.getDocumentUrls());
-        sellerApplicationRequestDTO.setStatus(sellerApplication.getStatus());
-        sellerApplicationRequestDTO.setAdminComment(sellerApplication.getAdminComment());
-        sellerApplicationRequestDTO.setCreatedAt(sellerApplication.getCreatedAt());
-        sellerApplicationRequestDTO.setUpdatedAt(sellerApplication.getUpdatedAt());
-        return sellerApplicationRequestDTO;
+    /**
+     * Converts a SellerApplication to its response DTO.
+     * isAdmin = true  → sensitive fields (idNumber, bankAccount) returned as-is
+     * isAdmin = false → sensitive fields are masked for privacy
+     */
+    private SellerApplicationResponseDTO sellerApplicationToSellerApplicationResponseDTO(
+            SellerApplication sellerApplication, boolean isAdmin) {
+
+        SellerApplicationResponseDTO dto = new SellerApplicationResponseDTO();
+        dto.setId(sellerApplication.getId());
+        dto.setUserId(sellerApplication.getUser().getId());
+        dto.setBusinessName(sellerApplication.getBusinessName());
+        dto.setAddress(sellerApplication.getAddress());
+        dto.setStatus(sellerApplication.getStatus());
+        dto.setAdminComment(sellerApplication.getAdminComment());
+        dto.setDocumentUrls(sellerApplication.getDocumentUrls());
+        dto.setCreatedAt(sellerApplication.getCreatedAt());
+        dto.setUpdatedAt(sellerApplication.getUpdatedAt());
+
+        if (isAdmin) {
+            dto.setIdNumber(sellerApplication.getIdNumber());
+            dto.setBankAccount(sellerApplication.getBankAccount());
+        } else {
+            dto.setIdNumber(mask(sellerApplication.getIdNumber()));
+            dto.setBankAccount(maskBankAccount(sellerApplication.getBankAccount()));
+        }
+
+        return dto;
+    }
+
+    /** Shows only last 4 chars: "****1234" */
+    private String maskBankAccount(String value) {
+        if (value == null || value.length() <= 4) return "****";
+        return "****" + value.substring(value.length() - 4);
+    }
+
+    /** Shows first 2 and last 2 chars: "72****45" */
+    private String mask(String value) {
+        if (value == null || value.length() <= 4) return "****";
+        return value.substring(0, 2) + "****" + value.substring(value.length() - 2);
     }
 }

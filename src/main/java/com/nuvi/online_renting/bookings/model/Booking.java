@@ -3,6 +3,9 @@ package com.nuvi.online_renting.bookings.model;
 import com.nuvi.online_renting.item.model.Item;
 import com.nuvi.online_renting.users.model.User;
 import jakarta.persistence.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+import org.hibernate.annotations.SQLRestriction;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -15,6 +18,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "bookings")
 @EntityListeners(AuditingEntityListener.class)
+@SQLRestriction("deleted = false")
 public class Booking {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,10 +26,12 @@ public class Booking {
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "user_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User user;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "item_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Item item;
 
     @Column(nullable = false)
@@ -55,6 +61,12 @@ public class Booking {
 
     @LastModifiedBy
     private String updatedBy;
+
+    // Soft delete
+    @Column(nullable = false)
+    private boolean deleted = false;
+
+    private LocalDateTime deletedAt;
 
     // getters & setters
     public Long getId() {
@@ -152,4 +164,10 @@ public class Booking {
     public void setUpdatedBy(String updatedBy) {
         this.updatedBy = updatedBy;
     }
+
+    public boolean isDeleted() { return deleted; }
+    public void setDeleted(boolean deleted) { this.deleted = deleted; }
+
+    public LocalDateTime getDeletedAt() { return deletedAt; }
+    public void setDeletedAt(LocalDateTime deletedAt) { this.deletedAt = deletedAt; }
 }
