@@ -24,14 +24,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -42,6 +46,9 @@ public class AuthController {
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
+
+    @Value("${app.email-verification.expiry-ms:86400000}")
+    private long emailVerificationExpiryMs;
 
     private final AuthenticationManager authManager;
     private final PasswordEncoder passwordEncoder;
@@ -75,7 +82,8 @@ public class AuthController {
 
     @Operation(
             summary = "Register a new user account",
-            description = "Creates a new account with the USER role. After registration, log in to get tokens. " +
+            description = "Creates a new account with the USER role. A verification email is sent immediately. " +
+                          "You must verify your email before you can log in. " +
                           "To become a SELLER, submit a seller application via POST /api/sellers/apply after logging in."
     )
     @PostMapping("/register")
@@ -83,6 +91,9 @@ public class AuthController {
         if (userRepository.existsByEmail(req.getEmail())) {
             throw new ConflictException("Email is already registered. Please use a different email or log in.");
         }
+
+        String verificationToken = UUID.randomUUID().toString().replace("-", "");
+
         User u = new User();
         u.setName(req.getName());
         u.setEmail(req.getEmail());
@@ -90,15 +101,73 @@ public class AuthController {
         u.setRole(Role.USER);
         u.setPhone(req.getPhone());
         u.setEnabled(true);
+        u.setEmailVerified(false);
+        u.setEmailVerificationToken(verificationToken);
+        u.setEmailVerificationTokenExpiry(LocalDateTime.now().plusSeconds(emailVerificationExpiryMs / 1000));
         userRepository.save(u);
-        log.info("New user registered: {}", req.getEmail());
-        return ResponseEntity.ok(new ApiResponse<>(true, "Registration successful. You can now log in.", null));
+
+        String verificationLink = frontendUrl + "/verify-email?token=" + verificationToken;
+        emailService.sendVerificationEmail(u.getEmail(), u.getName(), verificationLink);
+
+        log.info("New user registered, verification email sent: {}", req.getEmail());
+        return ResponseEntity.ok(new ApiResponse<>(true,
+                "Registration successful. Please check your email to verify your account before logging in.", null));
+    }
+
+    @Operation(
+            summary = "Verify email address",
+            description = "Confirms the user's email using the token sent during registration. " +
+                          "The token is valid for 24 hours. After verification, the user can log in."
+    )
+    @GetMapping("/verify-email")
+    public ResponseEntity<ApiResponse<Void>> verifyEmail(@RequestParam String token) {
+        User user = userRepository.findByEmailVerificationToken(token)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Invalid or already used verification token."));
+
+        if (user.getEmailVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Verification link has expired. Please request a new one.");
+        }
+
+        user.setEmailVerified(true);
+        user.setEmailVerificationToken(null);
+        user.setEmailVerificationTokenExpiry(null);
+        userRepository.save(user);
+
+        log.info("Email verified for user: {}", user.getEmail());
+        return ResponseEntity.ok(new ApiResponse<>(true, "Email verified successfully. You can now log in.", null));
+    }
+
+    @Operation(
+            summary = "Resend verification email",
+            description = "Sends a new verification email if the account is not yet verified. " +
+                          "Use this if the original link expired. The new link is valid for 24 hours."
+    )
+    @PostMapping("/resend-verification")
+    public ResponseEntity<ApiResponse<Void>> resendVerification(@RequestParam String email) {
+        userRepository.findByEmail(email).ifPresent(user -> {
+            if (!user.isEmailVerified()) {
+                String newToken = UUID.randomUUID().toString().replace("-", "");
+                user.setEmailVerificationToken(newToken);
+                user.setEmailVerificationTokenExpiry(LocalDateTime.now().plusSeconds(emailVerificationExpiryMs / 1000));
+                userRepository.save(user);
+
+                String verificationLink = frontendUrl + "/verify-email?token=" + newToken;
+                emailService.sendVerificationEmail(user.getEmail(), user.getName(), verificationLink);
+                log.info("Verification email resent to: {}", email);
+            }
+        });
+        // Always return success to avoid user enumeration
+        return ResponseEntity.ok(new ApiResponse<>(true,
+                "If that email is registered and unverified, a new verification link has been sent.", null));
     }
 
     @Operation(
             summary = "Login",
             description = "Authenticate with email and password. Returns a short-lived JWT access token (24h) " +
                           "and a long-lived refresh token (7 days). " +
+                          "Email must be verified before login is allowed. " +
                           "Use the access token in the Authorization header as: Bearer <accessToken>. " +
                           "When the access token expires, call POST /api/auth/refresh with the refresh token to get a new one."
     )
@@ -107,6 +176,12 @@ public class AuthController {
         authManager.authenticate(new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword()));
 
         CustomUserDetails userDetails = (CustomUserDetails) userDetailsService.loadUserByUsername(req.getEmail());
+
+        if (!userDetails.getUser().isEmailVerified()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Email not verified. Please check your inbox and verify your email before logging in.");
+        }
+
         String accessToken = jwtTokenService.generateToken(userDetails);
 
         // Create (or replace) the refresh token for this user

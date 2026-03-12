@@ -62,6 +62,15 @@ public class User {
 
     private boolean kycVerified = false;
 
+    // ─── Email Verification ────────────────────────────────────────────────────
+    @Column(nullable = false)
+    private boolean emailVerified = false;
+
+    @Column(length = 64)
+    private String emailVerificationToken;
+
+    private LocalDateTime emailVerificationTokenExpiry;
+
     // Soft delete — record is never physically removed from DB
     @Column(nullable = false)
     private boolean deleted = false;
@@ -208,4 +217,13 @@ public class User {
 
     public LocalDateTime getDeletedAt() { return deletedAt; }
     public void setDeletedAt(LocalDateTime deletedAt) { this.deletedAt = deletedAt; }
+
+    public boolean isEmailVerified() { return emailVerified; }
+    public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
+
+    public String getEmailVerificationToken() { return emailVerificationToken; }
+    public void setEmailVerificationToken(String emailVerificationToken) { this.emailVerificationToken = emailVerificationToken; }
+
+    public LocalDateTime getEmailVerificationTokenExpiry() { return emailVerificationTokenExpiry; }
+    public void setEmailVerificationTokenExpiry(LocalDateTime emailVerificationTokenExpiry) { this.emailVerificationTokenExpiry = emailVerificationTokenExpiry; }
 }

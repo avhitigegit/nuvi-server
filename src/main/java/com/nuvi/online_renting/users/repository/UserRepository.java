@@ -18,6 +18,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByEmail(String email);
 
+    Optional<User> findByEmailVerificationToken(String token);
+
     // Filter by name, role, enabled with pagination
     @Query("SELECT u FROM User u WHERE " +
             "(:name IS NULL OR LOWER(u.name) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
