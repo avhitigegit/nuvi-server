@@ -34,3 +34,6 @@ build/
 
 ### Secrets — never commit real credentials ###
 .env
+
+### Local notes — never commit ###
+terminal-o

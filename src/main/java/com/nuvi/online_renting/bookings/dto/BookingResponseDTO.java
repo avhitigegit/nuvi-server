@@ -20,6 +20,9 @@ public class BookingResponseDTO {
     private LocalDate endDate;
     private String status;
 
+    // Terms acceptance audit
+    private LocalDateTime termsAcceptedAt;
+
     // Return tracking
     private LocalDateTime returnedAt;
     private String returnNote;

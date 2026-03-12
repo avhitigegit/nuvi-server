@@ -117,6 +117,16 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
+    @Override
+    @Transactional
+    public UserResponseDTO updateKycStatus(Long userId, boolean kycVerified) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+        user.setKycVerified(kycVerified);
+        log.info("KYC status for user {} manually set to {} by admin", userId, kycVerified);
+        return mapToResponseDTO(userRepository.save(user));
+    }
+
     private UserResponseDTO mapToResponseDTO(User user) {
         UserResponseDTO dto = new UserResponseDTO();
         dto.setId(user.getId());

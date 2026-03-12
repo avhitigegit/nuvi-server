@@ -1,5 +1,6 @@
 package com.nuvi.online_renting.bookings.dto;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -24,6 +25,13 @@ public class BookingRequestDTO  {
     private LocalDate endDate;
 
     private String status;
+
+    @NotNull(message = "You must accept the rental terms to proceed")
+    @AssertTrue(message = "You must accept the rental terms to proceed")
+    private Boolean termsAccepted;
+
+    // Set by the controller from HttpServletRequest — not supplied by the client
+    private String clientIp;
 
     // getters & setters
     public Long getId() {
@@ -72,6 +80,22 @@ public class BookingRequestDTO  {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public Boolean getTermsAccepted() {
+        return termsAccepted;
+    }
+
+    public void setTermsAccepted(Boolean termsAccepted) {
+        this.termsAccepted = termsAccepted;
+    }
+
+    public String getClientIp() {
+        return clientIp;
+    }
+
+    public void setClientIp(String clientIp) {
+        this.clientIp = clientIp;
     }
 
 }

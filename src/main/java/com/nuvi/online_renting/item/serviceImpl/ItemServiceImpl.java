@@ -45,6 +45,11 @@ public class ItemServiceImpl implements ItemService {
     public ItemResponseDTO createItem(ItemRequestDTO dto) {
         User currentUser = authFacade.getCurrentUser();
 
+        if (!currentUser.isKycVerified()) {
+            throw new ForbiddenException("Your identity (KYC) has not been verified yet. " +
+                    "Please complete your seller application and wait for admin approval before listing items.");
+        }
+
         Item item = new Item();
         item.setName(dto.getName());
         item.setDescription(dto.getDescription());
@@ -83,6 +88,10 @@ public class ItemServiceImpl implements ItemService {
 
         if (!isAdmin && !isOwner) {
             throw new ForbiddenException("You are not allowed to update this item");
+        }
+
+        if (!isAdmin && !currentUser.isKycVerified()) {
+            throw new ForbiddenException("Your identity (KYC) has not been verified. You cannot update items until your seller application is approved.");
         }
 
         item.setName(dto.getName());

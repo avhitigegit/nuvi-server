@@ -25,4 +25,6 @@ public interface UserService {
     UserProfileResponse updateMyProfile(UserProfileRequest userProfileRequest);
 
     void deactivateMyAccount();
+
+    UserResponseDTO updateKycStatus(Long userId, boolean kycVerified);
 }

@@ -155,12 +155,18 @@ public class SellerApplicationServiceImpl implements SellerApplicationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
         sellerApplication.setStatus(decision.getStatus());
         sellerApplication.setAdminComment(decision.getComment());
-        // if approved -> set user.role = SELLER
+        // if approved -> promote user to SELLER role and mark KYC as verified
+        // if rejected -> revoke KYC verification
+        User user = sellerApplication.getUser();
         if (decision.getStatus() == SellerStatus.APPROVED) {
-            User user = sellerApplication.getUser();
             user.setRole(Role.SELLER);
-            userRepository.save(user);
+            user.setKycVerified(true);
+            log.info("KYC verified for user {}", user.getId());
+        } else if (decision.getStatus() == SellerStatus.REJECTED) {
+            user.setKycVerified(false);
+            log.info("KYC revoked for user {}", user.getId());
         }
+        userRepository.save(user);
         sellerApplication = sellerApplicationRepository.save(sellerApplication);
         log.info("Seller application {} decided by {}: status={}", id, adminEmail, decision.getStatus());
         // Admin decision — return full unmasked data

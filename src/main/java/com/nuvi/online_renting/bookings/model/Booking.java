@@ -43,6 +43,10 @@ public class Booking {
     @Column(nullable = false)
     private String status;
 
+    // Rental agreement acceptance — timestamped audit trail
+    private LocalDateTime termsAcceptedAt;
+    private String termsAcceptedIp;
+
     // Return tracking
     private LocalDateTime returnedAt;
 
@@ -170,4 +174,10 @@ public class Booking {
 
     public LocalDateTime getDeletedAt() { return deletedAt; }
     public void setDeletedAt(LocalDateTime deletedAt) { this.deletedAt = deletedAt; }
+
+    public LocalDateTime getTermsAcceptedAt() { return termsAcceptedAt; }
+    public void setTermsAcceptedAt(LocalDateTime termsAcceptedAt) { this.termsAcceptedAt = termsAcceptedAt; }
+
+    public String getTermsAcceptedIp() { return termsAcceptedIp; }
+    public void setTermsAcceptedIp(String termsAcceptedIp) { this.termsAcceptedIp = termsAcceptedIp; }
 }

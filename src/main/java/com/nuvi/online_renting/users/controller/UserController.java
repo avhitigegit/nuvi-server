@@ -95,4 +95,19 @@ public class UserController {
         userService.deactivateMyAccount();
         return ResponseEntity.noContent().build();
     }
+
+    @Operation(
+            summary = "Update KYC verification status (Admin)",
+            description = "Admin manually sets or revokes KYC verification for a user. " +
+                          "KYC is automatically set to true when a seller application is approved, " +
+                          "and false when rejected. Use this endpoint for manual overrides only. " +
+                          "Example: PATCH /api/users/5/kyc?verified=true"
+    )
+    @PatchMapping("/{id}/kyc")
+    @PreAuthorize("hasAuthority('FULL_ACCESS')")
+    public ResponseEntity<ApiResponse<UserResponseDTO>> updateKycStatus(@PathVariable Long id,
+                                                                         @RequestParam boolean verified) {
+        return ResponseEntity.ok(new ApiResponse<>(true,
+                "KYC status updated to " + verified, userService.updateKycStatus(id, verified)));
+    }
 }

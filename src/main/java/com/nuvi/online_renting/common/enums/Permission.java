@@ -23,11 +23,16 @@ public enum Permission {
     APPLY_SELLER,
     UPLOAD_SELLER_DOCS,
 
+    // Disputes
+    RAISE_DISPUTE,
+    VIEW_OWN_DISPUTES,
+
     // Admin
     VIEW_ALL_USERS,
     VIEW_ALL_BOOKINGS,
     MANAGE_SELLER_APPLICATIONS,
     UPDATE_BOOKING_STATUS,
+    MANAGE_DISPUTES,
     FULL_ACCESS
 
     }

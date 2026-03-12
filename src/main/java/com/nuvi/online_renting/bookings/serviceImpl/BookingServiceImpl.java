@@ -25,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Service
@@ -43,7 +44,8 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponseDTO createBooking(BookingRequestDTO dto) {
         User user = userRepository.findById(dto.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id " + dto.getUserId()));
-        Item item = itemRepository.findById(dto.getItemId())
+        // Pessimistic lock — prevents two concurrent requests from booking the same item simultaneously
+        Item item = itemRepository.findByIdWithLock(dto.getItemId())
                 .orElseThrow(() -> new ResourceNotFoundException("Item not found with id " + dto.getItemId()));
 
         if (!dto.getEndDate().isAfter(dto.getStartDate())) {
@@ -64,6 +66,8 @@ public class BookingServiceImpl implements BookingService {
         booking.setStartDate(dto.getStartDate());
         booking.setEndDate(dto.getEndDate());
         booking.setStatus(BookingStatus.PENDING.name());
+        booking.setTermsAcceptedAt(LocalDateTime.now());
+        booking.setTermsAcceptedIp(dto.getClientIp());
 
         BookingResponseDTO result = convertToDTO(bookingRepository.save(booking));
         log.info("Booking {} created by user {} for item {}", result.getId(), dto.getUserId(), dto.getItemId());
@@ -169,6 +173,17 @@ public class BookingServiceImpl implements BookingService {
         }
 
         booking.setStatus(newStatus.name());
+
+        // Keep item availability in sync with booking status
+        Item item = booking.getItem();
+        if (newStatus == BookingStatus.CONFIRMED) {
+            item.setAvailable(false);
+            itemRepository.save(item);
+        } else if (newStatus == BookingStatus.CANCELLED) {
+            item.setAvailable(true);
+            itemRepository.save(item);
+        }
+
         log.info("Booking {} status changed: {} → {}", bookingId, current.name(), newStatus.name());
         return convertToDTO(bookingRepository.save(booking));
     }
@@ -210,6 +225,7 @@ public class BookingServiceImpl implements BookingService {
         dto.setStartDate(booking.getStartDate());
         dto.setEndDate(booking.getEndDate());
         dto.setStatus(booking.getStatus());
+        dto.setTermsAcceptedAt(booking.getTermsAcceptedAt());
         dto.setReturnedAt(booking.getReturnedAt());
         dto.setReturnNote(booking.getReturnNote());
         dto.setCreatedAt(booking.getCreatedAt());
