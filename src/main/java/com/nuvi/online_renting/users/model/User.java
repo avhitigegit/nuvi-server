@@ -78,6 +78,15 @@ public class User {
 
     private LocalDateTime emailVerificationTokenExpiry;
 
+    // ─── Phone Verification ────────────────────────────────────────────────────
+    @Column(nullable = false)
+    private boolean phoneVerified = false;
+
+    @Column(length = 6)
+    private String phoneOtp;
+
+    private LocalDateTime phoneOtpExpiry;
+
     // ─── Suspension ────────────────────────────────────────────────────────────
     @Column(nullable = false)
     private boolean suspended = false;
@@ -261,4 +270,13 @@ public class User {
 
     public LocalDateTime getEmailVerificationTokenExpiry() { return emailVerificationTokenExpiry; }
     public void setEmailVerificationTokenExpiry(LocalDateTime emailVerificationTokenExpiry) { this.emailVerificationTokenExpiry = emailVerificationTokenExpiry; }
+
+    public boolean isPhoneVerified() { return phoneVerified; }
+    public void setPhoneVerified(boolean phoneVerified) { this.phoneVerified = phoneVerified; }
+
+    public String getPhoneOtp() { return phoneOtp; }
+    public void setPhoneOtp(String phoneOtp) { this.phoneOtp = phoneOtp; }
+
+    public LocalDateTime getPhoneOtpExpiry() { return phoneOtpExpiry; }
+    public void setPhoneOtpExpiry(LocalDateTime phoneOtpExpiry) { this.phoneOtpExpiry = phoneOtpExpiry; }
 }

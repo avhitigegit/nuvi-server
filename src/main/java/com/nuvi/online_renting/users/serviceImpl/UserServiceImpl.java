@@ -152,6 +152,7 @@ public class UserServiceImpl implements UserService {
         res.setNicNumber(user.getNicNumber());
         res.setProfilePictureUrl(user.getProfilePictureUrl());
         res.setKycVerified(user.isKycVerified());
+        res.setPhoneVerified(user.isPhoneVerified());
         return res;
     }
 }

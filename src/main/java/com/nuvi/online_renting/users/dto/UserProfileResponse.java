@@ -8,7 +8,7 @@ public class UserProfileResponse {
     private String nicNumber;
     private String profilePictureUrl;
     private boolean kycVerified;
-
+    private boolean phoneVerified;
 
     public String getName() {
         return name;
@@ -65,4 +65,7 @@ public class UserProfileResponse {
     public void setKycVerified(boolean kycVerified) {
         this.kycVerified = kycVerified;
     }
+
+    public boolean isPhoneVerified() { return phoneVerified; }
+    public void setPhoneVerified(boolean phoneVerified) { this.phoneVerified = phoneVerified; }
 }

@@ -97,6 +97,13 @@
 			<version>2.25.60</version>
 		</dependency>
 
+		<!-- AWS SNS (phone OTP SMS — active when app.sms.provider=sns) -->
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>sns</artifactId>
+			<version>2.25.60</version>
+		</dependency>
+
 		<!-- Rate Limiting -->
 		<dependency>
 			<groupId>com.bucket4j</groupId>
