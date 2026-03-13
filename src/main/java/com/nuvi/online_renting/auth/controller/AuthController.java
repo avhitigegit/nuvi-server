@@ -38,7 +38,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/v1/auth")
 @Tag(name = "Authentication", description = "Endpoints to register, log in, refresh access tokens, and log out.")
 public class AuthController {
 
@@ -84,7 +84,7 @@ public class AuthController {
             summary = "Register a new user account",
             description = "Creates a new account with the USER role. A verification email is sent immediately. " +
                           "You must verify your email before you can log in. " +
-                          "To become a SELLER, submit a seller application via POST /api/sellers/apply after logging in."
+                          "To become a SELLER, submit a seller application via POST /api/v1/sellers/apply after logging in."
     )
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<Void>> register(@Valid @RequestBody RegisterRequest req) {
@@ -104,6 +104,9 @@ public class AuthController {
         u.setEmailVerified(false);
         u.setEmailVerificationToken(verificationToken);
         u.setEmailVerificationTokenExpiry(LocalDateTime.now().plusSeconds(emailVerificationExpiryMs / 1000));
+        // PDPA: record the exact moment the user accepted the Terms of Service.
+        // Submitting the registration form constitutes acceptance.
+        u.setTermsAcceptedAt(LocalDateTime.now());
         userRepository.save(u);
 
         String verificationLink = frontendUrl + "/verify-email?token=" + verificationToken;
@@ -169,7 +172,7 @@ public class AuthController {
                           "and a long-lived refresh token (7 days). " +
                           "Email must be verified before login is allowed. " +
                           "Use the access token in the Authorization header as: Bearer <accessToken>. " +
-                          "When the access token expires, call POST /api/auth/refresh with the refresh token to get a new one."
+                          "When the access token expires, call POST /api/v1/auth/refresh with the refresh token to get a new one."
     )
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest req) {
@@ -260,7 +263,8 @@ public class AuthController {
             summary = "Reset password",
             description = "Resets the user's password using the token received by email. " +
                           "The token is single-use and expires after 15 minutes. " +
-                          "After a successful reset, log in with the new password."
+                          "After a successful reset all active sessions are invalidated — " +
+                          "log in again with the new password."
     )
     @PostMapping("/reset-password")
     public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
@@ -271,8 +275,12 @@ public class AuthController {
         user.setPassword(passwordEncoder.encode(req.getNewPassword()));
         userRepository.save(user);
 
-        // Invalidate the token — one-time use
+        // Invalidate the reset token — one-time use
         passwordResetTokenService.deleteToken(resetToken);
+
+        // Invalidate all active refresh tokens — forces re-login on all devices.
+        // Any session using the old password (e.g. a stolen refresh token) becomes useless.
+        refreshTokenService.deleteByUser(user);
 
         return ResponseEntity.ok(new ApiResponse<>(true,
                 "Password has been reset successfully. You can now log in with your new password.", null));

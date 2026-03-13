@@ -1,5 +1,6 @@
 package com.nuvi.online_renting.users.serviceImpl;
 
+import com.nuvi.online_renting.auth.service.RefreshTokenService;
 import com.nuvi.online_renting.common.dto.PagedResponse;
 import com.nuvi.online_renting.common.enums.Role;
 import com.nuvi.online_renting.common.exceptions.ResourceNotFoundException;
@@ -29,13 +30,16 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final AuthenticationFacade authenticationFacade;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenService refreshTokenService;
 
     public UserServiceImpl(UserRepository userRepository,
                            AuthenticationFacade authenticationFacade,
-                           PasswordEncoder passwordEncoder) {
+                           PasswordEncoder passwordEncoder,
+                           RefreshTokenService refreshTokenService) {
         this.userRepository = userRepository;
         this.authenticationFacade = authenticationFacade;
         this.passwordEncoder = passwordEncoder;
+        this.refreshTokenService = refreshTokenService;
     }
 
     @Override
@@ -86,10 +90,57 @@ public class UserServiceImpl implements UserService {
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+        anonymizeAndDelete(user);
+        log.info("Admin deleted and anonymized user {}", id);
+    }
+
+    @Override
+    @Transactional
+    public void deleteMyAccount() {
+        User user = authenticationFacade.getCurrentUser();
+        anonymizeAndDelete(user);
+        log.info("User {} requested account deletion (self)", user.getId());
+    }
+
+    /**
+     * PDPA right to erasure: wipes all personally identifiable information from the
+     * user record while keeping the row so that foreign-key references (bookings,
+     * reviews, disputes) remain intact.
+     *
+     * After this call the account:
+     *   - cannot be logged into (disabled, password scrambled, tokens revoked)
+     *   - contains no real name, email, phone, address or NIC
+     *   - is marked deleted=true so @SQLRestriction hides it from normal queries
+     */
+    private void anonymizeAndDelete(User user) {
+        Long id = user.getId();
+
+        // Replace all PII with non-identifying placeholders
+        user.setName("deleted-" + id);
+        // Use .invalid TLD — RFC 2606 guarantees it can never be a real domain
+        user.setEmail("deleted-" + id + "@deleted.invalid");
+        // Scramble password so no one can log in, even with DB access
+        user.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+        user.setPhone(null);
+        user.setAddress(null);
+        user.setNicNumber(null);
+        user.setProfilePictureUrl(null);
+
+        // Clear any pending verification tokens
+        user.setEmailVerificationToken(null);
+        user.setEmailVerificationTokenExpiry(null);
+        user.setPhoneOtp(null);
+        user.setPhoneOtpExpiry(null);
+
+        // Disable the account
+        user.setEnabled(false);
         user.setDeleted(true);
         user.setDeletedAt(LocalDateTime.now());
+
         userRepository.save(user);
-        log.info("User {} soft-deleted", id);
+
+        // Revoke all sessions — no active refresh token can be used after deletion
+        refreshTokenService.deleteByUser(user);
     }
 
     @Override
@@ -140,6 +191,7 @@ public class UserServiceImpl implements UserService {
         dto.setUpdatedAt(user.getUpdatedAt());
         dto.setCreatedBy(user.getCreatedBy());
         dto.setUpdatedBy(user.getUpdatedBy());
+        dto.setTermsAcceptedAt(user.getTermsAcceptedAt());
         return dto;
     }
 

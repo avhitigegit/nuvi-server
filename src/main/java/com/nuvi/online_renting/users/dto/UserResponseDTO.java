@@ -17,6 +17,7 @@ public class UserResponseDTO {
     private LocalDateTime updatedAt;
     private String createdBy;
     private String updatedBy;
+    private LocalDateTime termsAcceptedAt;
 
 //    public UserResponseDTO() {
 //    }
@@ -108,4 +109,7 @@ public class UserResponseDTO {
     public void setUpdatedBy(String updatedBy) {
         this.updatedBy = updatedBy;
     }
+
+    public LocalDateTime getTermsAcceptedAt() { return termsAcceptedAt; }
+    public void setTermsAcceptedAt(LocalDateTime termsAcceptedAt) { this.termsAcceptedAt = termsAcceptedAt; }
 }

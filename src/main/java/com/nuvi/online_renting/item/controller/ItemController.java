@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,8 +19,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.concurrent.TimeUnit;
+
 @RestController
-@RequestMapping("/api/items")
+@RequestMapping("/api/v1/items")
 @Tag(name = "Items", description = "Browse, search, and manage rental item listings. Sellers create and manage their own items. All users can search and view items without authentication.")
 public class ItemController {
 
@@ -39,7 +42,11 @@ public class ItemController {
     @Operation(summary = "Get item by ID", description = "Retrieve full details of a single item by its ID. No authentication required.")
     @GetMapping("/{id}")
     public ResponseEntity<ItemResponseDTO> getItemById(@PathVariable Long id) {
-        return ResponseEntity.ok(itemService.getItemById(id));
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.maxAge(60, TimeUnit.SECONDS)
+                        .staleWhileRevalidate(5, TimeUnit.MINUTES)
+                        .cachePublic())
+                .body(itemService.getItemById(id));
     }
 
     @Operation(
@@ -47,7 +54,7 @@ public class ItemController {
             description = "Search items with optional filters: name (partial match), price range, availability, and seller. " +
                           "Add lat, lng, and radiusKm for location-based search — returns items within the given radius, sorted by distance. " +
                           "Supports pagination and sorting. No authentication required. " +
-                          "Example: GET /api/items?name=bike&available=true&lat=6.9271&lng=79.8612&radiusKm=10&page=0&size=10"
+                          "Example: GET /api/v1/items?name=bike&available=true&lat=6.9271&lng=79.8612&radiusKm=10&page=0&size=10"
     )
     @GetMapping
     public ResponseEntity<PagedResponse<ItemResponseDTO>> getAllItems(
@@ -60,7 +67,9 @@ public class ItemController {
             @RequestParam(required = false) Double lng,
             @RequestParam(required = false) Double radiusKm,
             @PageableDefault(size = 10, sort = "id") Pageable pageable) {
-        return ResponseEntity.ok(itemService.searchItems(name, minPrice, maxPrice, available, sellerId, lat, lng, radiusKm, pageable));
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.maxAge(30, TimeUnit.SECONDS).cachePublic())
+                .body(itemService.searchItems(name, minPrice, maxPrice, available, sellerId, lat, lng, radiusKm, pageable));
     }
 
     @Operation(summary = "Get my item listings", description = "Returns a paginated list of all items created by the currently logged-in seller. Requires SELLER or ADMIN role.")
@@ -108,8 +117,10 @@ public class ItemController {
             return ResponseEntity.notFound().build();
         }
 
+        // Cache the redirect for 5 minutes — safe because S3 pre-signed URLs are valid for 60 minutes
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.LOCATION, imageUrl);
+        headers.setCacheControl(CacheControl.maxAge(5, TimeUnit.MINUTES).cachePublic());
         return ResponseEntity.status(HttpStatus.FOUND).headers(headers).build();
     }
 }

@@ -18,7 +18,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/bookings")
+@RequestMapping("/api/v1/bookings")
 @RequiredArgsConstructor
 @Tag(name = "Bookings", description = "Manage the full rental booking lifecycle — from creation and confirmation through to completion and return tracking.")
 public class BookingController {
@@ -60,7 +60,7 @@ public class BookingController {
             summary = "List and filter bookings",
             description = "Returns a paginated list of bookings. Filter by status (PENDING, CONFIRMED, CANCELLED, COMPLETED) and/or userId. " +
                           "ADMINs can see all bookings; regular users see only their own. " +
-                          "Example: GET /api/bookings?status=PENDING&userId=3&page=0&size=10&sort=startDate,asc"
+                          "Example: GET /api/v1/bookings?status=PENDING&userId=3&page=0&size=10&sort=startDate,asc"
     )
     @GetMapping
     @PreAuthorize("hasAnyAuthority('VIEW_OWN_BOOKINGS', 'VIEW_ALL_BOOKINGS')")
@@ -105,7 +105,7 @@ public class BookingController {
             description = "Admin marks a CONFIRMED booking as COMPLETED, meaning the renter has returned the item. " +
                           "An optional return note (e.g. condition of the item) can be added. " +
                           "The item's availability is automatically restored to true after this action. " +
-                          "Example: PATCH /api/bookings/5/complete?returnNote=Returned+in+good+condition"
+                          "Example: PATCH /api/v1/bookings/5/complete?returnNote=Returned+in+good+condition"
     )
     @PatchMapping("/{id}/complete")
     @PreAuthorize("hasAuthority('UPDATE_BOOKING_STATUS')")
@@ -119,7 +119,7 @@ public class BookingController {
             description = "Returns all PENDING and CONFIRMED bookings for a specific item. " +
                           "Useful for sellers to see who has booked their item and when. " +
                           "Cancelled and completed bookings are excluded. " +
-                          "Example: GET /api/bookings/item/3?page=0&size=10"
+                          "Example: GET /api/v1/bookings/item/3?page=0&size=10"
     )
     @GetMapping("/item/{itemId}")
     @PreAuthorize("hasAnyAuthority('UPDATE_OWN_ITEM', 'FULL_ACCESS')")

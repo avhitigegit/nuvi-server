@@ -20,6 +20,8 @@ public interface UserService {
 
     void deleteUser(Long id);
 
+    void deleteMyAccount();
+
     UserProfileResponse getMyProfile();
 
     UserProfileResponse updateMyProfile(UserProfileRequest userProfileRequest);

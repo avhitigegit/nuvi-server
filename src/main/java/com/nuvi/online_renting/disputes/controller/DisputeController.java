@@ -1,5 +1,6 @@
 package com.nuvi.online_renting.disputes.controller;
 
+import com.nuvi.online_renting.common.audit.Auditable;
 import com.nuvi.online_renting.common.dto.ApiResponse;
 import com.nuvi.online_renting.common.dto.PagedResponse;
 import com.nuvi.online_renting.common.enums.DisputeStatus;
@@ -18,7 +19,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/disputes")
+@RequestMapping("/api/v1/disputes")
 @RequiredArgsConstructor
 @Tag(name = "Disputes", description = "Raise and manage disputes for rental bookings. Renters raise disputes; admins review and resolve them.")
 public class DisputeController {
@@ -50,7 +51,7 @@ public class DisputeController {
             description = "Returns a paginated list of disputes. " +
                           "Admins see all disputes; regular users see only their own. " +
                           "Filter by status: OPEN, UNDER_REVIEW, RESOLVED, REJECTED. " +
-                          "Example: GET /api/disputes?status=OPEN&page=0&size=10"
+                          "Example: GET /api/v1/disputes?status=OPEN&page=0&size=10"
     )
     @GetMapping
     @PreAuthorize("hasAnyAuthority('VIEW_OWN_DISPUTES', 'MANAGE_DISPUTES')")
@@ -61,6 +62,7 @@ public class DisputeController {
     }
 
     @Operation(summary = "Mark dispute as Under Review (Admin)", description = "Admin acknowledges the dispute and begins reviewing it. Transitions status from OPEN to UNDER_REVIEW.")
+    @Auditable(action = "DISPUTE_UNDER_REVIEW", resourceType = "Dispute")
     @PatchMapping("/{id}/review")
     @PreAuthorize("hasAuthority('MANAGE_DISPUTES')")
     public ResponseEntity<ApiResponse<DisputeResponseDTO>> markUnderReview(@PathVariable Long id) {
@@ -68,6 +70,7 @@ public class DisputeController {
     }
 
     @Operation(summary = "Resolve a dispute (Admin)", description = "Admin resolves the dispute in the renter's favour. Requires a resolution note explaining the outcome.")
+    @Auditable(action = "DISPUTE_RESOLVED", resourceType = "Dispute")
     @PatchMapping("/{id}/resolve")
     @PreAuthorize("hasAuthority('MANAGE_DISPUTES')")
     public ResponseEntity<ApiResponse<DisputeResponseDTO>> resolveDispute(@PathVariable Long id,
@@ -76,6 +79,7 @@ public class DisputeController {
     }
 
     @Operation(summary = "Reject a dispute (Admin)", description = "Admin rejects the dispute. Requires a note explaining the reason for rejection.")
+    @Auditable(action = "DISPUTE_REJECTED", resourceType = "Dispute")
     @PatchMapping("/{id}/reject")
     @PreAuthorize("hasAuthority('MANAGE_DISPUTES')")
     public ResponseEntity<ApiResponse<DisputeResponseDTO>> rejectDispute(@PathVariable Long id,

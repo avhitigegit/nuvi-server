@@ -25,7 +25,7 @@ public class OpenApiConfig {
                                 Admins manage the full platform including users, bookings, and seller approvals.
 
                                 **How to authenticate:**
-                                1. Call `POST /api/auth/login` with your email and password.
+                                1. Call `POST /api/v1/auth/login` with your email and password.
                                 2. Copy the `token` from the response.
                                 3. Click the **Authorize** button above, enter: `Bearer <your_token>`, and click Authorize.
                                 4. All secured endpoints will now include your token automatically.
@@ -45,6 +45,6 @@ public class OpenApiConfig {
                                         .type(SecurityScheme.Type.HTTP)
                                         .scheme("bearer")
                                         .bearerFormat("JWT")
-                                        .description("Enter the JWT token obtained from /api/auth/login. Format: Bearer <token>")));
+                                        .description("Enter the JWT token obtained from /api/v1/auth/login. Format: Bearer <token>")));
     }
 }

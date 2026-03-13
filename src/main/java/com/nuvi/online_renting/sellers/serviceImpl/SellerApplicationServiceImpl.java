@@ -15,6 +15,7 @@ import com.nuvi.online_renting.sellers.repository.SellerApplicationRepository;
 import com.nuvi.online_renting.sellers.service.SellerApplicationService;
 import com.nuvi.online_renting.users.model.User;
 import com.nuvi.online_renting.users.repository.UserRepository;
+import com.nuvi.online_renting.common.storage.S3StorageService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +36,7 @@ public class SellerApplicationServiceImpl implements SellerApplicationService {
     private final SellerApplicationRepository sellerApplicationRepository;
     private final UserRepository userRepository;
     private final AuthenticationFacade authFacade;
+    private final S3StorageService s3StorageService;
 
 //    @Override
 //    @Transactional
@@ -235,7 +237,12 @@ public class SellerApplicationServiceImpl implements SellerApplicationService {
         dto.setAddress(sellerApplication.getAddress());
         dto.setStatus(sellerApplication.getStatus());
         dto.setAdminComment(sellerApplication.getAdminComment());
-        dto.setDocumentUrls(sellerApplication.getDocumentUrls());
+        // documentUrls stored as S3 keys — convert to short-lived pre-signed URLs (15 min)
+        if (sellerApplication.getDocumentUrls() != null) {
+            dto.setDocumentUrls(sellerApplication.getDocumentUrls().stream()
+                    .map(s3StorageService::generateDocUrl)
+                    .collect(java.util.stream.Collectors.toList()));
+        }
         dto.setCreatedAt(sellerApplication.getCreatedAt());
         dto.setUpdatedAt(sellerApplication.getUpdatedAt());
 

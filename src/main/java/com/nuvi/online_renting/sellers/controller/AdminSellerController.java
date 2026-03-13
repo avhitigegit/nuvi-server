@@ -1,5 +1,6 @@
 package com.nuvi.online_renting.sellers.controller;
 
+import com.nuvi.online_renting.common.audit.Auditable;
 import com.nuvi.online_renting.common.dto.ApiResponse;
 import com.nuvi.online_renting.common.enums.SellerStatus;
 import com.nuvi.online_renting.sellers.dto.SellerApplicationResponseDTO;
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin/sellers")
+@RequestMapping("/api/v1/admin/sellers")
 @RequiredArgsConstructor
 @PreAuthorize("hasAuthority('MANAGE_SELLER_APPLICATIONS')")
 @Tag(name = "Admin — Seller Applications", description = "Admin-only endpoints to review pending seller applications and approve or reject them. Approving an application upgrades the user's role to SELLER.")
@@ -29,7 +30,7 @@ public class AdminSellerController {
     @Operation(
             summary = "List seller applications (Admin)",
             description = "Returns all seller applications, optionally filtered by status (PENDING, APPROVED, REJECTED). " +
-                          "Example: GET /api/admin/sellers/applications?status=PENDING"
+                          "Example: GET /api/v1/admin/sellers/applications?status=PENDING"
     )
     @GetMapping("/applications")
     public ResponseEntity<List<SellerApplicationResponseDTO>> list(
@@ -43,6 +44,7 @@ public class AdminSellerController {
                           "When APPROVED, the applicant's role is automatically upgraded from USER to SELLER, " +
                           "granting them access to create and manage item listings."
     )
+    @Auditable(action = "SELLER_APPLICATION_DECIDED", resourceType = "SellerApplication")
     @PatchMapping("/applications/{id}")
     public ResponseEntity<SellerApplicationResponseDTO> decide(
             @PathVariable Long id,
@@ -56,6 +58,7 @@ public class AdminSellerController {
             description = "Suspends an approved seller by user ID. A suspended seller cannot create or update items " +
                           "and their items cannot be booked. The seller retains login access and can view their own data."
     )
+    @Auditable(action = "SELLER_SUSPENDED", resourceType = "User")
     @PreAuthorize("hasAuthority('SUSPEND_SELLER')")
     @PatchMapping("/{userId}/suspend")
     public ResponseEntity<ApiResponse<Void>> suspend(
@@ -70,6 +73,7 @@ public class AdminSellerController {
             summary = "Unsuspend a seller (Admin)",
             description = "Lifts the suspension on a seller, restoring full seller access."
     )
+    @Auditable(action = "SELLER_UNSUSPENDED", resourceType = "User")
     @PreAuthorize("hasAuthority('SUSPEND_SELLER')")
     @PatchMapping("/{userId}/unsuspend")
     public ResponseEntity<ApiResponse<Void>> unsuspend(@PathVariable Long userId) {

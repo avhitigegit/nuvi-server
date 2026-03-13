@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!--
+        logback-spring.xml — custom log pattern with request correlation IDs.
+
+        Log format:
+          2026-03-13 14:32:01.123  INFO [req-id:a1b2c3d4f5e6g7h8] BookingServiceImpl - Booking 42 created
+          2026-03-13 14:32:01.456 ERROR [req-id:a1b2c3d4f5e6g7h8] GlobalExceptionHandler - Unhandled exception
+
+        The req-id comes from MDC key "reqId" set by CorrelationIdFilter.
+        If no req-id is present (e.g. background jobs), the field shows "-".
+
+        Profile-based:
+          dev  — coloured console output, DEBUG level for com.nuvi
+          prod — plain console output (captured by CloudWatch), INFO level
+    -->
+
+    <!-- ─── Dev profile: coloured console ─────────────────────────────────── -->
+    <springProfile name="dev,default">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr([req-id:%-16X{reqId:--}]){cyan} %clr(%-40.40logger{39}){magenta} %clr(-){faint} %m%n%xEx</pattern>
+            </encoder>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+
+        <!-- Verbose logging for local development -->
+        <logger name="com.nuvi" level="DEBUG"/>
+        <logger name="org.springframework.web" level="INFO"/>
+    </springProfile>
+
+    <!-- ─── Prod profile: plain console (captured by CloudWatch) ───────────── -->
+    <springProfile name="prod">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [req-id:%-16X{reqId:--}] %-40.40logger{39} - %m%n%xEx</pattern>
+            </encoder>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+
+        <!-- Suppress noisy framework logs in production -->
+        <logger name="org.springframework.security" level="WARN"/>
+        <logger name="org.hibernate" level="WARN"/>
+        <logger name="com.zaxxer.hikari" level="WARN"/>
+    </springProfile>
+
+</configuration>

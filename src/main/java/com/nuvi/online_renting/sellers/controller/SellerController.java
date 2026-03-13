@@ -1,7 +1,8 @@
 package com.nuvi.online_renting.sellers.controller;
 
-import com.nuvi.online_renting.common.storage.FileStorageService;
+import com.nuvi.online_renting.common.storage.S3StorageService;
 import com.nuvi.online_renting.common.security.AuthenticationFacade;
+import com.nuvi.online_renting.common.validation.FileValidator;
 import com.nuvi.online_renting.sellers.dto.SellerApplicationRequestDTO;
 import com.nuvi.online_renting.sellers.dto.SellerApplicationResponseDTO;
 import com.nuvi.online_renting.sellers.service.SellerApplicationService;
@@ -19,20 +20,21 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/sellers")
+@RequestMapping("/api/v1/sellers")
 @RequiredArgsConstructor
 @Tag(name = "Seller Applications", description = "Users apply to become sellers on the platform. After applying, they can upload supporting documents. An admin reviews and approves or rejects the application.")
 public class SellerController {
 
     private final SellerApplicationService applicationService;
-    private final FileStorageService fileStorageService;
+    private final S3StorageService s3StorageService;
     private final AuthenticationFacade authFacade;
+    private final FileValidator fileValidator;
 
     @Operation(
             summary = "Apply to become a seller",
             description = "A logged-in USER submits an application to become a seller on the platform. " +
                           "Provide your business name and a short description. " +
-                          "After applying, upload supporting documents via POST /api/sellers/apply/{id}/docs. " +
+                          "After applying, upload supporting documents via POST /api/v1/sellers/apply/{id}/docs. " +
                           "An ADMIN will review and approve or reject the application."
     )
     @PostMapping("/apply")
@@ -48,22 +50,20 @@ public class SellerController {
             summary = "Upload supporting documents for a seller application",
             description = "Upload one or more documents (e.g. ID proof, business registration) to support a seller application. " +
                           "Send as multipart/form-data with field name 'docs'. Maximum file size per file is 50MB. " +
-                          "Use the application ID returned from POST /api/sellers/apply as the path variable."
+                          "Use the application ID returned from POST /api/v1/sellers/apply as the path variable."
     )
     @PostMapping(value = "/apply/{id}/docs", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAuthority('UPLOAD_SELLER_DOCS')")
     public ResponseEntity<String> uploadDocs(
             @PathVariable Long id,
             @RequestPart("docs") List<MultipartFile> docs) {
-        long maxFileSize = 50 * 1024 * 1024;
-        for (MultipartFile file : docs) {
-            if (file.getSize() > maxFileSize) {
-                return ResponseEntity.badRequest()
-                        .body("File " + file.getOriginalFilename() + " exceeds 50MB limit");
-            }
-        }
-        List<String> urls = fileStorageService.storeFiles(docs);
-        applicationService.attachDocs(id, urls);
+        // Centralised MIME validation — extension whitelist + magic-byte content check
+        // Allowed: pdf, jpg, jpeg, png — max 20 MB each
+        fileValidator.validateDocuments(docs);
+
+        // Upload to S3 private prefix — returns keys, not public URLs
+        List<String> keys = s3StorageService.uploadDocs(id, docs);
+        applicationService.attachDocs(id, keys);
         return ResponseEntity.ok("Documents uploaded successfully");
     }
 

@@ -7,6 +7,7 @@ import com.nuvi.online_renting.common.exceptions.ForbiddenException;
 import com.nuvi.online_renting.common.exceptions.ResourceNotFoundException;
 import com.nuvi.online_renting.common.security.AuthenticationFacade;
 import com.nuvi.online_renting.common.storage.S3StorageService;
+import com.nuvi.online_renting.common.validation.FileValidator;
 import com.nuvi.online_renting.item.dto.ItemRequestDTO;
 import com.nuvi.online_renting.item.dto.ItemResponseDTO;
 import com.nuvi.online_renting.item.model.Item;
@@ -19,9 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.net.URLConnection;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -33,13 +31,16 @@ public class ItemServiceImpl implements ItemService {
     private final ItemRepository itemRepository;
     private final AuthenticationFacade authFacade;
     private final S3StorageService s3StorageService;
+    private final FileValidator fileValidator;
 
     public ItemServiceImpl(ItemRepository itemRepository,
                            AuthenticationFacade authFacade,
-                           S3StorageService s3StorageService) {
+                           S3StorageService s3StorageService,
+                           FileValidator fileValidator) {
         this.itemRepository = itemRepository;
         this.authFacade = authFacade;
         this.s3StorageService = s3StorageService;
+        this.fileValidator = fileValidator;
     }
 
     @Override
@@ -203,38 +204,25 @@ public class ItemServiceImpl implements ItemService {
             throw new ForbiddenException("You are not allowed to upload an image for this item");
         }
 
+        // Centralised MIME validation — extension whitelist + magic-byte content check
+        fileValidator.validateImage(file);
+
         String originalFilename = file.getOriginalFilename();
-        if (originalFilename == null || originalFilename.isBlank()) {
-            throw new BadRequestException("Invalid file name");
-        }
-
         String ext = originalFilename.substring(originalFilename.lastIndexOf('.') + 1).toLowerCase();
-        if (!List.of("jpg", "jpeg", "png", "gif", "webp").contains(ext)) {
-            throw new BadRequestException("Only image files are allowed (jpg, jpeg, png, gif, webp)");
-        }
-
-        // Validate actual file content — prevents renamed executables from being uploaded
-        try (BufferedInputStream bis = new BufferedInputStream(file.getInputStream())) {
-            String detectedMime = URLConnection.guessContentTypeFromStream(bis);
-            if (detectedMime == null || !detectedMime.startsWith("image/")) {
-                throw new BadRequestException("File content does not match an image type. Upload aborted.");
-            }
-        } catch (IOException e) {
-            throw new BadRequestException("Could not read file content for validation.");
-        }
-
         String s3Key = "items/item_" + id + "_" + System.currentTimeMillis() + "." + ext;
-        String imageUrl = s3StorageService.uploadFile(s3Key, file);
+        s3StorageService.uploadFile(s3Key, file);
 
-        item.setImageUrl(imageUrl);
+        // Store the S3 key — pre-signed URL is generated on each GET request
+        item.setImageUrl(s3Key);
         return convertToResponseDTO(itemRepository.save(item));
     }
 
     @Override
     public String getImagePath(Long id) {
-        return itemRepository.findById(id)
+        String key = itemRepository.findById(id)
                 .map(Item::getImageUrl)
                 .orElseThrow(() -> new ResourceNotFoundException("Item not found with id " + id));
+        return s3StorageService.generateItemImageUrl(key);
     }
 
     private ItemResponseDTO convertToResponseDTO(Item item) {
@@ -246,7 +234,8 @@ public class ItemServiceImpl implements ItemService {
         dto.setAvailable(item.isAvailable());
         dto.setSellerId(item.getSeller().getId());
         dto.setSellerName(item.getSeller().getName());
-        dto.setImageUrl(item.getImageUrl());
+        // imageUrl in DB is an S3 key — generate a short-lived pre-signed URL for the response
+        dto.setImageUrl(s3StorageService.generateItemImageUrl(item.getImageUrl()));
         dto.setLatitude(item.getLatitude());
         dto.setLongitude(item.getLongitude());
         dto.setCreatedAt(item.getCreatedAt());

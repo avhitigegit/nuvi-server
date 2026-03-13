@@ -1,7 +1,6 @@
 package com.nuvi.online_renting.common.security;
 
-import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.Bucket;
+import com.nuvi.online_renting.common.ratelimit.RateLimiterStore;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,14 +13,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Rate limits sensitive authentication endpoints to 5 requests per minute per IP.
- * Applies to: /api/auth/login, /api/auth/forgot-password, /api/auth/refresh
+ * Applies per-IP rate limiting to sensitive authentication endpoints.
+ * Limit: 5 requests per minute per IP (configurable in RateLimiterStore implementations).
+ *
+ * The actual counter storage is delegated to RateLimiterStore:
+ *   - InMemoryRateLimiterStore (app.ratelimit.provider=memory) — dev / single-instance
+ *   - RedisRateLimiterStore    (app.ratelimit.provider=redis)  — prod / multi-instance
  */
 @Component
 public class RateLimitingFilter extends OncePerRequestFilter {
@@ -29,15 +29,16 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     private static final Logger log = LoggerFactory.getLogger(RateLimitingFilter.class);
 
     private static final List<String> RATE_LIMITED_PATHS = List.of(
-            "/api/auth/login",
-            "/api/auth/forgot-password",
-            "/api/auth/refresh"
+            "/api/v1/auth/login",
+            "/api/v1/auth/forgot-password",
+            "/api/v1/auth/refresh"
     );
 
-    private static final int MAX_REQUESTS_PER_MINUTE = 5;
+    private final RateLimiterStore rateLimiterStore;
 
-    // One bucket per IP address — cleaned up by GC over time for low traffic IPs
-    private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
+    public RateLimitingFilter(RateLimiterStore rateLimiterStore) {
+        this.rateLimiterStore = rateLimiterStore;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -51,12 +52,11 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         }
 
         String ip = getClientIp(request);
-        Bucket bucket = buckets.computeIfAbsent(ip, this::newBucket);
 
-        if (bucket.tryConsume(1)) {
+        if (rateLimiterStore.tryConsume(ip, path)) {
             chain.doFilter(request, response);
         } else {
-            log.warn("Rate limit exceeded for IP {} on endpoint {}", ip, path);
+            log.warn("Rate limit exceeded for IP {} on {}", ip, path);
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.getWriter().write(
@@ -65,17 +65,10 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         }
     }
 
-    private Bucket newBucket(String ip) {
-        Bandwidth limit = Bandwidth.builder()
-                .capacity(MAX_REQUESTS_PER_MINUTE)
-                .refillIntervally(MAX_REQUESTS_PER_MINUTE, Duration.ofMinutes(1))
-                .build();
-        return Bucket.builder().addLimit(limit).build();
-    }
-
     private String getClientIp(HttpServletRequest request) {
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isBlank()) {
+            // X-Forwarded-For may contain a chain of IPs — take the first (original client)
             return forwarded.split(",")[0].trim();
         }
         return request.getRemoteAddr();

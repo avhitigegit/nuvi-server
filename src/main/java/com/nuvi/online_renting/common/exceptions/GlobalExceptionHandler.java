@@ -1,6 +1,11 @@
 package com.nuvi.online_renting.common.exceptions;
 
 import com.nuvi.online_renting.common.dto.ApiResponse;
+import com.nuvi.online_renting.common.security.CorrelationIdFilter;
+import io.sentry.Sentry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -15,6 +20,8 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     // 404 — Resource not found (item, user, booking not found)
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -78,8 +85,16 @@ public class GlobalExceptionHandler {
     }
 
     // 500 — Unexpected server errors (catch-all, never exposes stack trace to client)
+    // Reported to Sentry — these are real bugs, not expected user/business errors.
+    // 4xx handlers above are intentionally NOT reported (they are expected application behaviour).
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneric(Exception ex) {
+        String reqId = MDC.get(CorrelationIdFilter.MDC_KEY);
+        log.error("Unhandled exception [req-id:{}]", reqId, ex);
+        // Tag the Sentry event with the correlation ID so the Sentry alert links
+        // directly to the matching log lines (search logs by this ID)
+        Sentry.configureScope(scope -> scope.setTag("req-id", reqId != null ? reqId : "unknown"));
+        Sentry.captureException(ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ApiResponse<>(false, "An unexpected error occurred. Please try again later.", null));
     }

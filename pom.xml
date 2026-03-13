@@ -83,6 +83,12 @@
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
 
+		<!-- AOP — used by AuditAspect to intercept @Auditable admin actions -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-aop</artifactId>
+		</dependency>
+
 		<!-- Swagger / OpenAPI UI -->
 		<dependency>
 			<groupId>org.springdoc</groupId>
@@ -104,11 +110,26 @@
 			<version>2.25.60</version>
 		</dependency>
 
+		<!-- AWS SES v2 (transactional email — active when app.email.provider=ses) -->
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>sesv2</artifactId>
+			<version>2.25.60</version>
+		</dependency>
+
 		<!-- Rate Limiting -->
 		<dependency>
 			<groupId>com.bucket4j</groupId>
 			<artifactId>bucket4j-core</artifactId>
 			<version>8.10.1</version>
+		</dependency>
+
+		<!-- Redis — used for distributed rate limiting in production (app.ratelimit.provider=redis).
+		     Auto-configuration is excluded by default in application.properties so the app starts
+		     fine without a Redis server in development. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-redis</artifactId>
 		</dependency>
 
 		<!-- Dotenv — auto-loads .env file into Spring environment -->
@@ -122,6 +143,13 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+
+		<!-- Sentry — real-time error tracking (active in prod when sentry.dsn is set) -->
+		<dependency>
+			<groupId>io.sentry</groupId>
+			<artifactId>sentry-spring-boot-starter-jakarta</artifactId>
+			<version>7.14.0</version>
 		</dependency>
 
 		<!-- JWT (jjwt 0.11.x) -->

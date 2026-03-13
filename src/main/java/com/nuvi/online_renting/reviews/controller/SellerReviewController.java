@@ -16,7 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/reviews")
+@RequestMapping("/api/v1/reviews")
 @RequiredArgsConstructor
 @Tag(name = "Seller Reviews", description = "Submit and view seller ratings and reviews. Only renters with a completed booking can review a seller.")
 public class SellerReviewController {
@@ -44,7 +44,7 @@ public class SellerReviewController {
     @Operation(
             summary = "Get all reviews for a seller",
             description = "Returns a paginated list of reviews for a specific seller, ordered by most recent. " +
-                          "Example: GET /api/reviews/seller/3?page=0&size=10"
+                          "Example: GET /api/v1/reviews/seller/3?page=0&size=10"
     )
     @GetMapping("/seller/{sellerId}")
     @PreAuthorize("hasAuthority('VIEW_REVIEWS')")

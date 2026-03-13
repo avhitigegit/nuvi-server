@@ -20,7 +20,7 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 
 @RestController
-@RequestMapping("/api/auth/phone")
+@RequestMapping("/api/v1/auth/phone")
 @Tag(name = "Phone Verification", description = "Send and verify a 6-digit OTP to confirm the user's phone number. " +
         "Requires a valid JWT (logged-in user). The OTP is valid for 10 minutes.")
 public class PhoneVerificationController {
@@ -88,7 +88,7 @@ public class PhoneVerificationController {
         }
 
         if (user.getPhoneOtp() == null || user.getPhoneOtpExpiry() == null) {
-            throw new BadRequestException("No OTP found. Please request a new one via POST /api/auth/phone/send-otp.");
+            throw new BadRequestException("No OTP found. Please request a new one via POST /api/v1/auth/phone/send-otp.");
         }
 
         if (user.getPhoneOtpExpiry().isBefore(LocalDateTime.now())) {

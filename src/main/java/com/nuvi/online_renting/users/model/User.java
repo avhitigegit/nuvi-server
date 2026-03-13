@@ -97,6 +97,11 @@ public class User {
 
     private String suspendedBy; // admin email who issued the suspension
 
+    // ─── PDPA / Consent ────────────────────────────────────────────────────────
+    // Timestamp when the user accepted the Terms of Service during registration.
+    // Required by PDPA/GDPR to prove lawful basis of data processing.
+    private LocalDateTime termsAcceptedAt;
+
     // Soft delete — record is never physically removed from DB
     @Column(nullable = false)
     private boolean deleted = false;
@@ -249,6 +254,9 @@ public class User {
 
     public String getSuspendedBy() { return suspendedBy; }
     public void setSuspendedBy(String suspendedBy) { this.suspendedBy = suspendedBy; }
+
+    public LocalDateTime getTermsAcceptedAt() { return termsAcceptedAt; }
+    public void setTermsAcceptedAt(LocalDateTime termsAcceptedAt) { this.termsAcceptedAt = termsAcceptedAt; }
 
     public boolean isDeleted() { return deleted; }
     public void setDeleted(boolean deleted) { this.deleted = deleted; }

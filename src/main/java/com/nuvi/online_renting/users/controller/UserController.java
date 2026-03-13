@@ -1,5 +1,6 @@
 package com.nuvi.online_renting.users.controller;
 
+import com.nuvi.online_renting.common.audit.Auditable;
 import com.nuvi.online_renting.common.dto.ApiResponse;
 import com.nuvi.online_renting.common.dto.PagedResponse;
 import com.nuvi.online_renting.common.enums.Role;
@@ -18,7 +19,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/api/v1/users")
 @Tag(name = "Users", description = "Manage user accounts and profiles. ADMINs can view and manage all users. Regular users can view and update their own profile or deactivate their own account.")
 public class UserController {
 
@@ -28,7 +29,7 @@ public class UserController {
         this.userService = userService;
     }
 
-    @Operation(summary = "Create a user account (Admin)", description = "Admin creates a new user account with a specified role. For self-registration, use POST /api/auth/register instead.")
+    @Operation(summary = "Create a user account (Admin)", description = "Admin creates a new user account with a specified role. For self-registration, use POST /api/v1/auth/register instead.")
     @PostMapping
     @PreAuthorize("hasAuthority('FULL_ACCESS')")
     public ResponseEntity<ApiResponse<UserResponseDTO>> createUser(@Valid @RequestBody UserRequestDTO dto) {
@@ -45,7 +46,7 @@ public class UserController {
     @Operation(
             summary = "List and filter all users (Admin)",
             description = "Returns a paginated list of all users. Filter by name (partial match), role (USER / SELLER / ADMIN), and account status (enabled). " +
-                          "Example: GET /api/users?name=alice&role=USER&enabled=true&page=0&size=10&sort=name,asc"
+                          "Example: GET /api/v1/users?name=alice&role=USER&enabled=true&page=0&size=10&sort=name,asc"
     )
     @GetMapping
     @PreAuthorize("hasAuthority('VIEW_ALL_USERS')")
@@ -58,7 +59,7 @@ public class UserController {
                 userService.getAllUsers(name, role, enabled, pageable)));
     }
 
-    @Operation(summary = "Update a user account (Admin)", description = "Admin updates any user's account details including their role. To update your own profile as a regular user, use PUT /api/users/me instead.")
+    @Operation(summary = "Update a user account (Admin)", description = "Admin updates any user's account details including their role. To update your own profile as a regular user, use PUT /api/v1/users/me instead.")
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('UPDATE_OWN_PROFILE', 'VIEW_ALL_USERS')")
     public ResponseEntity<ApiResponse<UserResponseDTO>> updateUser(@PathVariable Long id,
@@ -67,6 +68,7 @@ public class UserController {
     }
 
     @Operation(summary = "Delete a user account (Admin)", description = "Permanently deletes a user account. This is a hard delete and cannot be undone. Admin only.")
+    @Auditable(action = "USER_DELETED", resourceType = "User")
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('FULL_ACCESS')")
     public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long id) {
@@ -97,12 +99,29 @@ public class UserController {
     }
 
     @Operation(
+            summary = "Delete my account (Right to erasure)",
+            description = "Permanently erases all personally identifiable information from this account " +
+                          "(name, email, phone, address, NIC) as required by PDPA/GDPR. " +
+                          "The account row is retained so linked bookings and reviews remain consistent, " +
+                          "but no personal data will be readable. All active sessions are also revoked. " +
+                          "This action cannot be undone."
+    )
+    @DeleteMapping("/me")
+    @PreAuthorize("hasAuthority('DEACTIVATE_OWN_ACCOUNT')")
+    public ResponseEntity<ApiResponse<Void>> deleteMyAccount() {
+        userService.deleteMyAccount();
+        return ResponseEntity.ok(new ApiResponse<>(true,
+                "Your account and all personal data have been permanently erased.", null));
+    }
+
+    @Operation(
             summary = "Update KYC verification status (Admin)",
             description = "Admin manually sets or revokes KYC verification for a user. " +
                           "KYC is automatically set to true when a seller application is approved, " +
                           "and false when rejected. Use this endpoint for manual overrides only. " +
-                          "Example: PATCH /api/users/5/kyc?verified=true"
+                          "Example: PATCH /api/v1/users/5/kyc?verified=true"
     )
+    @Auditable(action = "USER_KYC_UPDATED", resourceType = "User")
     @PatchMapping("/{id}/kyc")
     @PreAuthorize("hasAuthority('FULL_ACCESS')")
     public ResponseEntity<ApiResponse<UserResponseDTO>> updateKycStatus(@PathVariable Long id,
