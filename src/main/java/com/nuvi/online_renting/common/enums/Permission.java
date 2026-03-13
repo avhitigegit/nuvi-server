@@ -27,12 +27,17 @@ public enum Permission {
     RAISE_DISPUTE,
     VIEW_OWN_DISPUTES,
 
+    // Reviews
+    WRITE_REVIEW,
+    VIEW_REVIEWS,
+
     // Admin
     VIEW_ALL_USERS,
     VIEW_ALL_BOOKINGS,
     MANAGE_SELLER_APPLICATIONS,
     UPDATE_BOOKING_STATUS,
     MANAGE_DISPUTES,
+    SUSPEND_SELLER,
     FULL_ACCESS
 
     }

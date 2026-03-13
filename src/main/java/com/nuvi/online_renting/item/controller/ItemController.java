@@ -45,8 +45,9 @@ public class ItemController {
     @Operation(
             summary = "Search and browse items",
             description = "Search items with optional filters: name (partial match), price range, availability, and seller. " +
+                          "Add lat, lng, and radiusKm for location-based search — returns items within the given radius, sorted by distance. " +
                           "Supports pagination and sorting. No authentication required. " +
-                          "Example: GET /api/items?name=bike&minPrice=500&maxPrice=3000&available=true&page=0&size=10&sort=pricePerDay,asc"
+                          "Example: GET /api/items?name=bike&available=true&lat=6.9271&lng=79.8612&radiusKm=10&page=0&size=10"
     )
     @GetMapping
     public ResponseEntity<PagedResponse<ItemResponseDTO>> getAllItems(
@@ -55,8 +56,11 @@ public class ItemController {
             @RequestParam(required = false) Double maxPrice,
             @RequestParam(required = false) Boolean available,
             @RequestParam(required = false) Long sellerId,
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng,
+            @RequestParam(required = false) Double radiusKm,
             @PageableDefault(size = 10, sort = "id") Pageable pageable) {
-        return ResponseEntity.ok(itemService.searchItems(name, minPrice, maxPrice, available, sellerId, pageable));
+        return ResponseEntity.ok(itemService.searchItems(name, minPrice, maxPrice, available, sellerId, lat, lng, radiusKm, pageable));
     }
 
     @Operation(summary = "Get my item listings", description = "Returns a paginated list of all items created by the currently logged-in seller. Requires SELLER or ADMIN role.")

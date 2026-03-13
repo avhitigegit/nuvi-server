@@ -62,6 +62,13 @@ public class User {
 
     private boolean kycVerified = false;
 
+    // ─── Seller Rating ─────────────────────────────────────────────────────────
+    @Column(nullable = false)
+    private double averageRating = 0.0;
+
+    @Column(nullable = false)
+    private int totalReviews = 0;
+
     // ─── Email Verification ────────────────────────────────────────────────────
     @Column(nullable = false)
     private boolean emailVerified = false;
@@ -70,6 +77,16 @@ public class User {
     private String emailVerificationToken;
 
     private LocalDateTime emailVerificationTokenExpiry;
+
+    // ─── Suspension ────────────────────────────────────────────────────────────
+    @Column(nullable = false)
+    private boolean suspended = false;
+
+    private String suspensionReason;
+
+    private LocalDateTime suspendedAt;
+
+    private String suspendedBy; // admin email who issued the suspension
 
     // Soft delete — record is never physically removed from DB
     @Column(nullable = false)
@@ -212,11 +229,29 @@ public class User {
         this.kycVerified = kycVerified;
     }
 
+    public boolean isSuspended() { return suspended; }
+    public void setSuspended(boolean suspended) { this.suspended = suspended; }
+
+    public String getSuspensionReason() { return suspensionReason; }
+    public void setSuspensionReason(String suspensionReason) { this.suspensionReason = suspensionReason; }
+
+    public LocalDateTime getSuspendedAt() { return suspendedAt; }
+    public void setSuspendedAt(LocalDateTime suspendedAt) { this.suspendedAt = suspendedAt; }
+
+    public String getSuspendedBy() { return suspendedBy; }
+    public void setSuspendedBy(String suspendedBy) { this.suspendedBy = suspendedBy; }
+
     public boolean isDeleted() { return deleted; }
     public void setDeleted(boolean deleted) { this.deleted = deleted; }
 
     public LocalDateTime getDeletedAt() { return deletedAt; }
     public void setDeletedAt(LocalDateTime deletedAt) { this.deletedAt = deletedAt; }
+
+    public double getAverageRating() { return averageRating; }
+    public void setAverageRating(double averageRating) { this.averageRating = averageRating; }
+
+    public int getTotalReviews() { return totalReviews; }
+    public void setTotalReviews(int totalReviews) { this.totalReviews = totalReviews; }
 
     public boolean isEmailVerified() { return emailVerified; }
     public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }

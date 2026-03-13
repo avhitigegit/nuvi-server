@@ -11,6 +11,8 @@ public class UserResponseDTO {
     private String email;
     private Role role;
     private boolean enabled;
+    private boolean suspended;
+    private String suspensionReason;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String createdBy;
@@ -68,6 +70,12 @@ public class UserResponseDTO {
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
+
+    public boolean isSuspended() { return suspended; }
+    public void setSuspended(boolean suspended) { this.suspended = suspended; }
+
+    public String getSuspensionReason() { return suspensionReason; }
+    public void setSuspensionReason(String suspensionReason) { this.suspensionReason = suspensionReason; }
 
     public LocalDateTime getCreatedAt() {
         return createdAt;

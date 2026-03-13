@@ -52,6 +52,10 @@ public class BookingServiceImpl implements BookingService {
             throw new BadRequestException("End date must be after start date");
         }
 
+        if (item.getSeller().isSuspended()) {
+            throw new BadRequestException("This item cannot be booked because the seller's account has been suspended");
+        }
+
         if (!item.isAvailable()) {
             throw new BadRequestException("Item is not available for booking");
         }

@@ -2,12 +2,14 @@ package com.nuvi.online_renting.sellers.serviceImpl;
 
 import com.nuvi.online_renting.common.enums.Role;
 import com.nuvi.online_renting.common.enums.SellerStatus;
+import com.nuvi.online_renting.common.exceptions.BadRequestException;
 import com.nuvi.online_renting.common.exceptions.ForbiddenException;
 import com.nuvi.online_renting.common.exceptions.ResourceNotFoundException;
 import com.nuvi.online_renting.common.security.AuthenticationFacade;
 import com.nuvi.online_renting.sellers.dto.SellerApplicationRequestDTO;
 import com.nuvi.online_renting.sellers.dto.SellerApplicationResponseDTO;
 import com.nuvi.online_renting.sellers.dto.SellerDecisionDTO;
+import com.nuvi.online_renting.sellers.dto.SellerSuspensionDTO;
 import com.nuvi.online_renting.sellers.model.SellerApplication;
 import com.nuvi.online_renting.sellers.repository.SellerApplicationRepository;
 import com.nuvi.online_renting.sellers.service.SellerApplicationService;
@@ -19,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -171,6 +174,50 @@ public class SellerApplicationServiceImpl implements SellerApplicationService {
         log.info("Seller application {} decided by {}: status={}", id, adminEmail, decision.getStatus());
         // Admin decision — return full unmasked data
         return sellerApplicationToSellerApplicationResponseDTO(sellerApplication, true);
+    }
+
+    @Override
+    @Transactional
+    public void suspendSeller(Long userId, SellerSuspensionDTO dto, String adminEmail) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (user.getRole() != Role.SELLER) {
+            throw new BadRequestException("Only users with SELLER role can be suspended");
+        }
+
+        if (user.isSuspended()) {
+            throw new BadRequestException("Seller is already suspended");
+        }
+
+        user.setSuspended(true);
+        user.setSuspensionReason(dto.getReason());
+        user.setSuspendedAt(LocalDateTime.now());
+        user.setSuspendedBy(adminEmail);
+        userRepository.save(user);
+        log.info("Seller {} suspended by admin {} — reason: {}", userId, adminEmail, dto.getReason());
+    }
+
+    @Override
+    @Transactional
+    public void unsuspendSeller(Long userId, String adminEmail) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (user.getRole() != Role.SELLER) {
+            throw new BadRequestException("Only users with SELLER role can be unsuspended");
+        }
+
+        if (!user.isSuspended()) {
+            throw new BadRequestException("Seller is not currently suspended");
+        }
+
+        user.setSuspended(false);
+        user.setSuspensionReason(null);
+        user.setSuspendedAt(null);
+        user.setSuspendedBy(null);
+        userRepository.save(user);
+        log.info("Seller {} unsuspended by admin {}", userId, adminEmail);
     }
 
     /**

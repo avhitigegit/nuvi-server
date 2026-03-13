@@ -24,7 +24,9 @@ public class RolePermissionMapper {
                     APPLY_SELLER,
                     UPLOAD_SELLER_DOCS,
                     RAISE_DISPUTE,
-                    VIEW_OWN_DISPUTES
+                    VIEW_OWN_DISPUTES,
+                    WRITE_REVIEW,
+                    VIEW_REVIEWS
             );
 
             case SELLER -> Set.of(
@@ -39,7 +41,9 @@ public class RolePermissionMapper {
                     DEACTIVATE_OWN_ACCOUNT,
                     CANCEL_OWN_BOOKING,
                     RAISE_DISPUTE,
-                    VIEW_OWN_DISPUTES
+                    VIEW_OWN_DISPUTES,
+                    WRITE_REVIEW,
+                    VIEW_REVIEWS
             );
 
             case ADMIN -> Set.of(
@@ -60,6 +64,8 @@ public class RolePermissionMapper {
                     MANAGE_SELLER_APPLICATIONS,
                     UPDATE_BOOKING_STATUS,
                     MANAGE_DISPUTES,
+                    SUSPEND_SELLER,
+                    VIEW_REVIEWS,
                     FULL_ACCESS
             );
         };

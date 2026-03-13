@@ -1,8 +1,10 @@
 package com.nuvi.online_renting.sellers.controller;
 
+import com.nuvi.online_renting.common.dto.ApiResponse;
 import com.nuvi.online_renting.common.enums.SellerStatus;
 import com.nuvi.online_renting.sellers.dto.SellerApplicationResponseDTO;
 import com.nuvi.online_renting.sellers.dto.SellerDecisionDTO;
+import com.nuvi.online_renting.sellers.dto.SellerSuspensionDTO;
 import com.nuvi.online_renting.sellers.service.SellerApplicationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -47,5 +49,32 @@ public class AdminSellerController {
             @Valid @RequestBody SellerDecisionDTO decision) {
         String adminEmail = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(applicationService.decide(id, decision, adminEmail));
+    }
+
+    @Operation(
+            summary = "Suspend a seller (Admin)",
+            description = "Suspends an approved seller by user ID. A suspended seller cannot create or update items " +
+                          "and their items cannot be booked. The seller retains login access and can view their own data."
+    )
+    @PreAuthorize("hasAuthority('SUSPEND_SELLER')")
+    @PatchMapping("/{userId}/suspend")
+    public ResponseEntity<ApiResponse<Void>> suspend(
+            @PathVariable Long userId,
+            @Valid @RequestBody SellerSuspensionDTO dto) {
+        String adminEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        applicationService.suspendSeller(userId, dto, adminEmail);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Seller suspended successfully", null));
+    }
+
+    @Operation(
+            summary = "Unsuspend a seller (Admin)",
+            description = "Lifts the suspension on a seller, restoring full seller access."
+    )
+    @PreAuthorize("hasAuthority('SUSPEND_SELLER')")
+    @PatchMapping("/{userId}/unsuspend")
+    public ResponseEntity<ApiResponse<Void>> unsuspend(@PathVariable Long userId) {
+        String adminEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        applicationService.unsuspendSeller(userId, adminEmail);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Seller unsuspended successfully", null));
     }
 }

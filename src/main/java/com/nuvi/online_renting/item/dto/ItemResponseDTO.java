@@ -19,6 +19,11 @@ public class ItemResponseDTO {
 
     private String imageUrl;
 
+    // Location
+    private Double latitude;
+    private Double longitude;
+    private Double distanceKm; // populated only when location search is used
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String createdBy;

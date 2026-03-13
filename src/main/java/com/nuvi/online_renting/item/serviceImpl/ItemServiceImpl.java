@@ -23,6 +23,8 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.net.URLConnection;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -50,12 +52,19 @@ public class ItemServiceImpl implements ItemService {
                     "Please complete your seller application and wait for admin approval before listing items.");
         }
 
+        if (currentUser.isSuspended()) {
+            throw new ForbiddenException("Your seller account has been suspended. " +
+                    "You cannot list new items. Please contact support.");
+        }
+
         Item item = new Item();
         item.setName(dto.getName());
         item.setDescription(dto.getDescription());
         item.setPricePerDay(dto.getPricePerDay());
         item.setAvailable(dto.getAvailable() != null ? dto.getAvailable() : true);
         item.setSeller(currentUser);
+        item.setLatitude(dto.getLatitude());
+        item.setLongitude(dto.getLongitude());
 
         return convertToResponseDTO(itemRepository.save(item));
     }
@@ -71,9 +80,52 @@ public class ItemServiceImpl implements ItemService {
     @Override
     @Transactional
     public PagedResponse<ItemResponseDTO> searchItems(String name, Double minPrice, Double maxPrice,
-                                                      Boolean available, Long sellerId, Pageable pageable) {
+                                                      Boolean available, Long sellerId,
+                                                      Double lat, Double lng, Double radiusKm,
+                                                      Pageable pageable) {
+        // Location search: fetch candidates with coordinates, filter by Haversine in Java
+        if (lat != null && lng != null && radiusKm != null) {
+            List<Item> candidates = itemRepository.findItemsWithCoordinates(name, minPrice, maxPrice, available, sellerId);
+
+            List<ItemResponseDTO> filtered = new ArrayList<>();
+            for (Item item : candidates) {
+                double distance = haversineKm(lat, lng, item.getLatitude(), item.getLongitude());
+                if (distance <= radiusKm) {
+                    ItemResponseDTO dto = convertToResponseDTO(item);
+                    dto.setDistanceKm(Math.round(distance * 10.0) / 10.0);
+                    filtered.add(dto);
+                }
+            }
+
+            // Sort by distance ascending
+            filtered.sort(Comparator.comparingDouble(ItemResponseDTO::getDistanceKm));
+
+            // Manual pagination
+            int pageNum = pageable.getPageNumber();
+            int pageSize = pageable.getPageSize();
+            int start = Math.min(pageNum * pageSize, filtered.size());
+            int end = Math.min(start + pageSize, filtered.size());
+            List<ItemResponseDTO> pageContent = filtered.subList(start, end);
+
+            return new PagedResponse<>(pageContent, pageNum, pageSize, filtered.size());
+        }
+
+        // Standard search without location
         Page<Item> page = itemRepository.searchItems(name, minPrice, maxPrice, available, sellerId, pageable);
         return new PagedResponse<>(page.map(this::convertToResponseDTO));
+    }
+
+    /**
+     * Haversine formula — calculates great-circle distance between two GPS points in km.
+     */
+    private double haversineKm(double lat1, double lng1, double lat2, double lng2) {
+        final double R = 6371.0;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLng = Math.toRadians(lng2 - lng1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
     @Override
@@ -94,12 +146,18 @@ public class ItemServiceImpl implements ItemService {
             throw new ForbiddenException("Your identity (KYC) has not been verified. You cannot update items until your seller application is approved.");
         }
 
+        if (!isAdmin && currentUser.isSuspended()) {
+            throw new ForbiddenException("Your seller account has been suspended. You cannot update items. Please contact support.");
+        }
+
         item.setName(dto.getName());
         item.setDescription(dto.getDescription());
         item.setPricePerDay(dto.getPricePerDay());
         if (dto.getAvailable() != null) {
             item.setAvailable(dto.getAvailable());
         }
+        item.setLatitude(dto.getLatitude());
+        item.setLongitude(dto.getLongitude());
 
         return convertToResponseDTO(itemRepository.save(item));
     }
@@ -189,6 +247,8 @@ public class ItemServiceImpl implements ItemService {
         dto.setSellerId(item.getSeller().getId());
         dto.setSellerName(item.getSeller().getName());
         dto.setImageUrl(item.getImageUrl());
+        dto.setLatitude(item.getLatitude());
+        dto.setLongitude(item.getLongitude());
         dto.setCreatedAt(item.getCreatedAt());
         dto.setUpdatedAt(item.getUpdatedAt());
         dto.setCreatedBy(item.getCreatedBy());

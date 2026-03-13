@@ -45,6 +45,10 @@ public class Item {
     // Stored file path on disk
     private String imageUrl;
 
+    // ─── Location ──────────────────────────────────────────────────────────────
+    private Double latitude;
+    private Double longitude;
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -105,4 +109,10 @@ public class Item {
 
     public LocalDateTime getDeletedAt() { return deletedAt; }
     public void setDeletedAt(LocalDateTime deletedAt) { this.deletedAt = deletedAt; }
+
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
 }

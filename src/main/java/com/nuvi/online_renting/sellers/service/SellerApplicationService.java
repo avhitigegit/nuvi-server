@@ -3,6 +3,7 @@ package com.nuvi.online_renting.sellers.service;
 import com.nuvi.online_renting.sellers.dto.SellerApplicationRequestDTO;
 import com.nuvi.online_renting.sellers.dto.SellerApplicationResponseDTO;
 import com.nuvi.online_renting.sellers.dto.SellerDecisionDTO;
+import com.nuvi.online_renting.sellers.dto.SellerSuspensionDTO;
 
 import java.util.List;
 
@@ -21,5 +22,9 @@ public interface SellerApplicationService {
     List<SellerApplicationResponseDTO> getByStatus(String status); // admin
 
     SellerApplicationResponseDTO decide(Long applicationId, SellerDecisionDTO decision, String adminEmail);
+
+    void suspendSeller(Long userId, SellerSuspensionDTO dto, String adminEmail);
+
+    void unsuspendSeller(Long userId, String adminEmail);
 
 }

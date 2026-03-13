@@ -31,7 +31,7 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
     // Paginated seller items
     Page<Item> findBySellerId(Long sellerId, Pageable pageable);
 
-    // Search with optional filters + pagination
+    // Search with optional filters + pagination (no location)
     @Query("SELECT i FROM Item i WHERE " +
             "(:name IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
             "(:minPrice IS NULL OR i.pricePerDay >= :minPrice) AND " +
@@ -44,4 +44,19 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                            @Param("available") Boolean available,
                            @Param("sellerId") Long sellerId,
                            Pageable pageable);
+
+    // Location pre-filter — returns items that have coordinates and match all other filters
+    // Haversine exact distance filtering is applied in the service layer
+    @Query("SELECT i FROM Item i WHERE " +
+            "i.latitude IS NOT NULL AND i.longitude IS NOT NULL AND " +
+            "(:name IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
+            "(:minPrice IS NULL OR i.pricePerDay >= :minPrice) AND " +
+            "(:maxPrice IS NULL OR i.pricePerDay <= :maxPrice) AND " +
+            "(:available IS NULL OR i.available = :available) AND " +
+            "(:sellerId IS NULL OR i.seller.id = :sellerId)")
+    List<Item> findItemsWithCoordinates(@Param("name") String name,
+                                        @Param("minPrice") Double minPrice,
+                                        @Param("maxPrice") Double maxPrice,
+                                        @Param("available") Boolean available,
+                                        @Param("sellerId") Long sellerId);
 }
