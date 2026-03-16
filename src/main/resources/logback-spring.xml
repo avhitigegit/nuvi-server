@@ -16,6 +16,19 @@
           prod — plain console output (captured by CloudWatch), INFO level
     -->
 
+    <!--
+        Register Spring Boot's %clr converter explicitly.
+        Required when using a custom logback-spring.xml — without this declaration
+        Logback parses the file before Spring Boot registers the converter,
+        causing "no conversion class registered for [clr]" startup failure.
+    -->
+    <conversionRule conversionWord="clr"
+                    class="org.springframework.boot.logging.logback.ColorConverter"/>
+    <conversionRule conversionWord="wex"
+                    class="org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter"/>
+    <conversionRule conversionWord="wEx"
+                    class="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter"/>
+
     <!-- ─── Dev profile: coloured console ─────────────────────────────────── -->
     <springProfile name="dev,default">
         <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">

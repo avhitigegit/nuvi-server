@@ -15,6 +15,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.stream.Collectors;
 
@@ -82,6 +83,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleMaxUploadSize(MaxUploadSizeExceededException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ApiResponse<>(false, "File size exceeds the maximum allowed limit of 50MB.", null));
+    }
+
+    // 4xx/5xx — Spring's ResponseStatusException (e.g. "Invalid or already used verification token")
+    // Returns the status code embedded in the exception instead of falling through to the 500 catch-all.
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiResponse<Void>> handleResponseStatus(ResponseStatusException ex) {
+        return ResponseEntity.status(ex.getStatusCode())
+                .body(new ApiResponse<>(false, ex.getReason(), null));
     }
 
     // 500 — Unexpected server errors (catch-all, never exposes stack trace to client)

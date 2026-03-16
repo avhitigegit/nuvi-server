@@ -1,0 +1,63 @@
+2026-03-15 17:06:00.599 DEBUG [req-id:7cb93008c7044379] horizationManagerBeforeMethodInterceptor - Authorizing method invocation ReflectiveMethodInvocation: public org.springframework.http.ResponseEntity com.nuvi.online_renting.sellers.controller.SellerController.myApplications(); target is of class [com.nuvi.online_renting.sellers.controller.SellerController]
+2026-03-15 17:06:00.600 DEBUG [req-id:7cb93008c7044379] horizationManagerBeforeMethodInterceptor - Authorized method invocation ReflectiveMethodInvocation: public org.springframework.http.ResponseEntity com.nuvi.online_renting.sellers.controller.SellerController.myApplications(); target is of class [com.nuvi.online_renting.sellers.controller.SellerController]
+Hibernate:
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.averageRating,
+        u1_0.createdAt,
+        u1_0.createdBy,
+        u1_0.deleted,
+        u1_0.deletedAt,
+        u1_0.email,
+        u1_0.emailVerificationToken,
+        u1_0.emailVerificationTokenExpiry,
+        u1_0.emailVerified,
+        u1_0.enabled,
+        u1_0.kycVerified,
+        u1_0.name,
+        u1_0.nicNumber,
+        u1_0.password,
+        u1_0.phone,
+        u1_0.phoneOtp,
+        u1_0.phoneOtpExpiry,
+        u1_0.phoneVerified,
+        u1_0.profilePictureUrl,
+        u1_0.role,
+        u1_0.suspended,
+        u1_0.suspendedAt,
+        u1_0.suspendedBy,
+        u1_0.suspensionReason,
+        u1_0.termsAcceptedAt,
+        u1_0.totalReviews,
+        u1_0.updatedAt,
+        u1_0.updatedBy
+    from
+        users u1_0
+    where
+        (
+            u1_0.deleted = 0
+        )
+        and u1_0.email=?
+Hibernate:
+    select
+        sa1_0.id,
+        sa1_0.address,
+        sa1_0.adminComment,
+        sa1_0.bankAccount,
+        sa1_0.businessName,
+        sa1_0.createdAt,
+        sa1_0.createdBy,
+        sa1_0.idNumber,
+        sa1_0.status,
+        sa1_0.updatedAt,
+        sa1_0.updatedBy,
+        sa1_0.user_id
+    from
+        seller_applications sa1_0
+    join
+        users u1_0
+            on u1_0.id=sa1_0.user_id
+            and (u1_0.deleted = 0)
+    where
+        u1_0.id=?

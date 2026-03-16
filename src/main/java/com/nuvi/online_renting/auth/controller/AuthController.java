@@ -175,7 +175,7 @@ public class AuthController {
                           "When the access token expires, call POST /api/v1/auth/refresh with the refresh token to get a new one."
     )
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest req) {
+    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody AuthRequest req) {
         authManager.authenticate(new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword()));
 
         CustomUserDetails userDetails = (CustomUserDetails) userDetailsService.loadUserByUsername(req.getEmail());
@@ -191,13 +191,13 @@ public class AuthController {
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(userDetails.getUser());
 
         log.info("User logged in: {}", req.getEmail());
-        return ResponseEntity.ok(new AuthResponse(
+        return ResponseEntity.ok(new ApiResponse<>(true, "Login successful.", new AuthResponse(
                 accessToken,
                 jwtTokenService.getExpirationMs(),
                 refreshToken.getToken(),
                 refreshTokenService.getRefreshTokenExpiryMs(),
                 userDetails.getUser().getRole().name()
-        ));
+        )));
     }
 
     @Operation(
@@ -208,7 +208,7 @@ public class AuthController {
                           "No Authorization header required for this endpoint."
     )
     @PostMapping("/refresh")
-    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest req) {
+    public ResponseEntity<ApiResponse<AuthResponse>> refresh(@Valid @RequestBody RefreshTokenRequest req) {
         RefreshToken refreshToken = refreshTokenService.findByToken(req.getRefreshToken());
         refreshTokenService.verifyExpiration(refreshToken);
 
@@ -216,13 +216,13 @@ public class AuthController {
         CustomUserDetails userDetails = (CustomUserDetails) userDetailsService.loadUserByUsername(user.getEmail());
         String newAccessToken = jwtTokenService.generateToken(userDetails);
 
-        return ResponseEntity.ok(new AuthResponse(
+        return ResponseEntity.ok(new ApiResponse<>(true, "Token refreshed.", new AuthResponse(
                 newAccessToken,
                 jwtTokenService.getExpirationMs(),
                 refreshToken.getToken(),
                 refreshTokenService.getRefreshTokenExpiryMs(),
                 user.getRole().name()
-        ));
+        )));
     }
 
     @Operation(
