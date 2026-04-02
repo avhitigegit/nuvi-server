@@ -51,12 +51,14 @@ public class SellerDashboardServiceImpl implements SellerDashboardService {
             throw new ResourceNotFoundException("sellerId query parameter is required for admin dashboard queries");
         }
 
+        final Long resolvedSellerId = sellerId;
+
         // Validate the target seller exists
-        User seller = userRepository.findById(sellerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Seller not found with id " + sellerId));
+        User seller = userRepository.findById(resolvedSellerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Seller not found with id " + resolvedSellerId));
 
         if (seller.getRole() != Role.SELLER && seller.getRole() != Role.ADMIN) {
-            throw new ForbiddenException("User " + sellerId + " is not a seller");
+            throw new ForbiddenException("User " + resolvedSellerId + " is not a seller");
         }
 
         LocalDateTime startOfMonth = LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()).atStartOfDay();
@@ -65,30 +67,30 @@ public class SellerDashboardServiceImpl implements SellerDashboardService {
         SellerDashboardDTO dto = new SellerDashboardDTO();
 
         // Items
-        dto.setTotalItems(itemRepository.countBySellerId(sellerId));
-        dto.setActiveItems(itemRepository.countBySellerIdAndAvailable(sellerId, true));
-        dto.setInactiveItems(itemRepository.countBySellerIdAndAvailable(sellerId, false));
+        dto.setTotalItems(itemRepository.countBySellerId(resolvedSellerId));
+        dto.setActiveItems(itemRepository.countBySellerIdAndAvailable(resolvedSellerId, true));
+        dto.setInactiveItems(itemRepository.countBySellerIdAndAvailable(resolvedSellerId, false));
 
         // Seller rating (from User entity — kept in sync by review submission)
         dto.setAverageRating(seller.getAverageRating());
         dto.setTotalReviews(seller.getTotalReviews());
 
         // Bookings
-        dto.setTotalBookings(bookingRepository.countBySellerId(sellerId));
-        dto.setPendingBookings(bookingRepository.countBySellerIdAndStatus(sellerId, BookingStatus.PENDING.name()));
-        dto.setConfirmedBookings(bookingRepository.countBySellerIdAndStatus(sellerId, BookingStatus.CONFIRMED.name()));
-        dto.setCompletedBookings(bookingRepository.countBySellerIdAndStatus(sellerId, BookingStatus.COMPLETED.name()));
-        dto.setCancelledBookings(bookingRepository.countBySellerIdAndStatus(sellerId, BookingStatus.CANCELLED.name()));
-        dto.setBookingsThisMonth(bookingRepository.countBySellerIdSince(sellerId, startOfMonth));
-        dto.setBookingsThisWeek(bookingRepository.countBySellerIdSince(sellerId, startOfWeek));
+        dto.setTotalBookings(bookingRepository.countBySellerId(resolvedSellerId));
+        dto.setPendingBookings(bookingRepository.countBySellerIdAndStatus(resolvedSellerId, BookingStatus.PENDING.name()));
+        dto.setConfirmedBookings(bookingRepository.countBySellerIdAndStatus(resolvedSellerId, BookingStatus.CONFIRMED.name()));
+        dto.setCompletedBookings(bookingRepository.countBySellerIdAndStatus(resolvedSellerId, BookingStatus.COMPLETED.name()));
+        dto.setCancelledBookings(bookingRepository.countBySellerIdAndStatus(resolvedSellerId, BookingStatus.CANCELLED.name()));
+        dto.setBookingsThisMonth(bookingRepository.countBySellerIdSince(resolvedSellerId, startOfMonth));
+        dto.setBookingsThisWeek(bookingRepository.countBySellerIdSince(resolvedSellerId, startOfWeek));
 
         // Earnings (COMPLETED bookings only)
-        dto.setTotalEarnings(round2(bookingRepository.sumEarningsBySellerId(sellerId)));
-        dto.setEarningsThisMonth(round2(bookingRepository.sumEarningsBySellerIdSince(sellerId, startOfMonth)));
-        dto.setEarningsThisWeek(round2(bookingRepository.sumEarningsBySellerIdSince(sellerId, startOfWeek)));
+        dto.setTotalEarnings(round2(bookingRepository.sumEarningsBySellerId(resolvedSellerId)));
+        dto.setEarningsThisMonth(round2(bookingRepository.sumEarningsBySellerIdSince(resolvedSellerId, startOfMonth)));
+        dto.setEarningsThisWeek(round2(bookingRepository.sumEarningsBySellerIdSince(resolvedSellerId, startOfWeek)));
 
         // Top 5 items
-        List<Object[]> topRaw = bookingRepository.findTopItemsBySellerId(sellerId, PageRequest.of(0, 5));
+        List<Object[]> topRaw = bookingRepository.findTopItemsBySellerId(resolvedSellerId, PageRequest.of(0, 5));
         List<SellerDashboardDTO.TopItemDTO> topItems = topRaw.stream().map(row -> {
             SellerDashboardDTO.TopItemDTO t = new SellerDashboardDTO.TopItemDTO();
             t.setItemId(((Number) row[0]).longValue());

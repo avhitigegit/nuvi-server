@@ -47,7 +47,8 @@ public class RolePermissionMapper {
                     VIEW_OWN_DISPUTES,
                     WRITE_REVIEW,
                     VIEW_REVIEWS,
-                    SEND_MESSAGE
+                    SEND_MESSAGE,
+                    SUBMIT_APPEAL
             );
 
             case ADMIN -> Set.of(

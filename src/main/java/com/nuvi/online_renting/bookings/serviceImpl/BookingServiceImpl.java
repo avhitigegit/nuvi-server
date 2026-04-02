@@ -2,6 +2,8 @@ package com.nuvi.online_renting.bookings.serviceImpl;
 
 import com.nuvi.online_renting.auth.service.EmailService;
 import com.nuvi.online_renting.bookings.dto.BookingRequestDTO;
+import com.nuvi.online_renting.coupons.model.Coupon;
+import com.nuvi.online_renting.coupons.serviceImpl.CouponServiceImpl;
 import com.nuvi.online_renting.item.repository.ItemBlockedDateRepository;
 import com.nuvi.online_renting.bookings.dto.BookingResponseDTO;
 import com.nuvi.online_renting.bookings.model.Booking;
@@ -42,6 +44,7 @@ public class BookingServiceImpl implements BookingService {
     private final ItemBlockedDateRepository blockedDateRepository;
     private final AuthenticationFacade authFacade;
     private final EmailService emailService;
+    private final CouponServiceImpl couponService;
 
     @Override
     @Transactional
@@ -72,6 +75,21 @@ public class BookingServiceImpl implements BookingService {
             throw new ConflictException("The item is not available for the selected dates — the seller has blocked this period");
         }
 
+        // Calculate base amount: pricePerDay × number of rental days
+        long rentalDays = dto.getEndDate().toEpochDay() - dto.getStartDate().toEpochDay();
+        double baseAmount = item.getPricePerDay() * rentalDays;
+
+        // Apply coupon if provided
+        double discountAmount = 0.0;
+        String appliedCouponCode = null;
+        if (dto.getCouponCode() != null && !dto.getCouponCode().isBlank()) {
+            Coupon coupon = couponService.findAndValidateCoupon(dto.getCouponCode(), baseAmount);
+            discountAmount = couponService.calculateDiscount(coupon, baseAmount);
+            appliedCouponCode = coupon.getCode();
+            // Increment usage count
+            coupon.setUsedCount(coupon.getUsedCount() + 1);
+        }
+
         Booking booking = new Booking();
         booking.setUser(user);
         booking.setItem(item);
@@ -80,6 +98,9 @@ public class BookingServiceImpl implements BookingService {
         booking.setStatus(BookingStatus.PENDING.name());
         booking.setTermsAcceptedAt(LocalDateTime.now());
         booking.setTermsAcceptedIp(dto.getClientIp());
+        booking.setAppliedCouponCode(appliedCouponCode);
+        booking.setDiscountAmount(round2(discountAmount));
+        booking.setTotalAmount(round2(Math.max(0, baseAmount - discountAmount)));
 
         BookingResponseDTO result = convertToDTO(bookingRepository.save(booking));
         log.info("Booking {} created by user {} for item {}", result.getId(), dto.getUserId(), dto.getItemId());
@@ -385,10 +406,20 @@ public class BookingServiceImpl implements BookingService {
         dto.setCancellationReason(booking.getCancellationReason());
         dto.setCancelledBy(booking.getCancelledBy());
         dto.setCancelledAt(booking.getCancelledAt());
+        dto.setAppliedCouponCode(booking.getAppliedCouponCode());
+        dto.setDiscountAmount(booking.getDiscountAmount());
+        dto.setTotalAmount(booking.getTotalAmount());
+        if (booking.getRecurringBooking() != null) {
+            dto.setRecurringBookingId(booking.getRecurringBooking().getId());
+        }
         dto.setCreatedAt(booking.getCreatedAt());
         dto.setUpdatedAt(booking.getUpdatedAt());
         dto.setCreatedBy(booking.getCreatedBy());
         dto.setUpdatedBy(booking.getUpdatedBy());
         return dto;
+    }
+
+    private double round2(double value) {
+        return Math.round(value * 100.0) / 100.0;
     }
 }

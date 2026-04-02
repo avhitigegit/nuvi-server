@@ -14,12 +14,12 @@ public interface ItemService {
 
     ItemResponseDTO createItem(ItemRequestDTO itemRequestDTO);
 
-    ItemResponseDTO getItemById(Long id);
+    ItemResponseDTO getItemById(Long id, String currency);
 
     PagedResponse<ItemResponseDTO> searchItems(String name, Double minPrice, Double maxPrice,
                                                Boolean available, Long sellerId, Long categoryId,
                                                Double lat, Double lng, Double radiusKm,
-                                               Pageable pageable);
+                                               String currency, Pageable pageable);
 
     ItemResponseDTO updateItem(Long id, ItemRequestDTO itemRequestDTO);
 

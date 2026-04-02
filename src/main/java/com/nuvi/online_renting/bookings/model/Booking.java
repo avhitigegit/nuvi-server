@@ -1,6 +1,7 @@
 package com.nuvi.online_renting.bookings.model;
 
 import com.nuvi.online_renting.item.model.Item;
+import com.nuvi.online_renting.recurring.model.RecurringBooking;
 import com.nuvi.online_renting.users.model.User;
 import jakarta.persistence.*;
 import org.hibernate.annotations.OnDelete;
@@ -51,6 +52,16 @@ public class Booking {
     private String cancellationReason;
     private String cancelledBy;       // email of the user who triggered the cancellation
     private LocalDateTime cancelledAt;
+
+    // Coupon / discount
+    private String appliedCouponCode;
+    private double discountAmount = 0.0;
+    private double totalAmount = 0.0;
+
+    // Recurring booking template that generated this occurrence (nullable)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recurring_booking_id")
+    private RecurringBooking recurringBooking;
 
     // Return tracking
     private LocalDateTime returnedAt;
@@ -194,4 +205,16 @@ public class Booking {
 
     public LocalDateTime getCancelledAt() { return cancelledAt; }
     public void setCancelledAt(LocalDateTime cancelledAt) { this.cancelledAt = cancelledAt; }
+
+    public String getAppliedCouponCode() { return appliedCouponCode; }
+    public void setAppliedCouponCode(String appliedCouponCode) { this.appliedCouponCode = appliedCouponCode; }
+
+    public double getDiscountAmount() { return discountAmount; }
+    public void setDiscountAmount(double discountAmount) { this.discountAmount = discountAmount; }
+
+    public double getTotalAmount() { return totalAmount; }
+    public void setTotalAmount(double totalAmount) { this.totalAmount = totalAmount; }
+
+    public RecurringBooking getRecurringBooking() { return recurringBooking; }
+    public void setRecurringBooking(RecurringBooking recurringBooking) { this.recurringBooking = recurringBooking; }
 }

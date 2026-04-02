@@ -98,6 +98,7 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/v1/items/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories", "/api/v1/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/currencies").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/sellers/apply").hasAnyRole("USER","SELLER")
                         .requestMatchers("/api/v1/sellers/**").hasAnyRole("USER","SELLER","ADMIN")
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")

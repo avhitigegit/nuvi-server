@@ -32,6 +32,9 @@ public enum Permission {
     // Messaging
     SEND_MESSAGE,
 
+    // Appeals
+    SUBMIT_APPEAL,
+
     // Reviews
     WRITE_REVIEW,
     VIEW_REVIEWS,

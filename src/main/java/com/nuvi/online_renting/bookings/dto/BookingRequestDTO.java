@@ -30,6 +30,9 @@ public class BookingRequestDTO  {
     @AssertTrue(message = "You must accept the rental terms to proceed")
     private Boolean termsAccepted;
 
+    // Optional coupon code — applied during booking creation
+    private String couponCode;
+
     // Set by the controller from HttpServletRequest — not supplied by the client
     private String clientIp;
 
@@ -98,4 +101,6 @@ public class BookingRequestDTO  {
         this.clientIp = clientIp;
     }
 
+    public String getCouponCode() { return couponCode; }
+    public void setCouponCode(String couponCode) { this.couponCode = couponCode; }
 }

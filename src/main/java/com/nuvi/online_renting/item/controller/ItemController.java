@@ -46,12 +46,14 @@ public class ItemController {
 
     @Operation(summary = "Get item by ID", description = "Retrieve full details of a single item by its ID. No authentication required.")
     @GetMapping("/{id}")
-    public ResponseEntity<ItemResponseDTO> getItemById(@PathVariable Long id) {
+    public ResponseEntity<ItemResponseDTO> getItemById(
+            @PathVariable Long id,
+            @RequestParam(required = false) String currency) {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.maxAge(60, TimeUnit.SECONDS)
                         .staleWhileRevalidate(5, TimeUnit.MINUTES)
                         .cachePublic())
-                .body(itemService.getItemById(id));
+                .body(itemService.getItemById(id, currency));
     }
 
     @Operation(
@@ -72,10 +74,11 @@ public class ItemController {
             @RequestParam(required = false) Double lat,
             @RequestParam(required = false) Double lng,
             @RequestParam(required = false) Double radiusKm,
+            @RequestParam(required = false) String currency,
             @PageableDefault(size = 10, sort = "id") Pageable pageable) {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.maxAge(30, TimeUnit.SECONDS).cachePublic())
-                .body(itemService.searchItems(name, minPrice, maxPrice, available, sellerId, categoryId, lat, lng, radiusKm, pageable));
+                .body(itemService.searchItems(name, minPrice, maxPrice, available, sellerId, categoryId, lat, lng, radiusKm, currency, pageable));
     }
 
     @Operation(summary = "Get my item listings", description = "Returns a paginated list of all items created by the currently logged-in seller. Requires SELLER or ADMIN role.")

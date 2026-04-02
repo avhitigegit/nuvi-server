@@ -198,6 +198,23 @@ public class AwsSesEmailService implements EmailService {
                         "<br/><br/>Please resubmit with a clearer document."));
     }
 
+    @Override
+    public void sendAppealApproved(String toEmail, String userName) {
+        send(toEmail, "Suspension Appeal Approved",
+                notification(userName,
+                        "Great news! Your suspension appeal has been approved.",
+                        "Your seller account has been reinstated. You can now list and manage items on the NUVI platform again."));
+    }
+
+    @Override
+    public void sendAppealRejected(String toEmail, String userName, String comment) {
+        send(toEmail, "Suspension Appeal Update",
+                notification(userName,
+                        "Your suspension appeal has been reviewed and rejected.",
+                        "Admin comment: " + (comment != null ? comment : "No additional details provided.") +
+                        "<br/><br/>If you believe this decision is incorrect, please contact NUVI support."));
+    }
+
     // ─── Internal ─────────────────────────────────────────────────────────────
 
     private void send(String to, String subject, String htmlBody) {

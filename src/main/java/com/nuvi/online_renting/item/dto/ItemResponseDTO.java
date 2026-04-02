@@ -27,6 +27,10 @@ public class ItemResponseDTO {
     private Long categoryId;
     private String categoryName;
 
+    // Currency conversion — populated only when ?currency= is passed
+    private Double displayPrice;
+    private String displayCurrency;
+
     private double averageRating;
     private int totalReviews;
 
@@ -41,6 +45,12 @@ public class ItemResponseDTO {
 
     public int getTotalReviews() { return totalReviews; }
     public void setTotalReviews(int totalReviews) { this.totalReviews = totalReviews; }
+
+    public Double getDisplayPrice() { return displayPrice; }
+    public void setDisplayPrice(Double displayPrice) { this.displayPrice = displayPrice; }
+
+    public String getDisplayCurrency() { return displayCurrency; }
+    public void setDisplayCurrency(String displayCurrency) { this.displayCurrency = displayCurrency; }
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

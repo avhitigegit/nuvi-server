@@ -63,4 +63,9 @@ public interface EmailService {
     void sendKycApproved(String toEmail, String userName);
 
     void sendKycRejected(String toEmail, String userName, String reason);
+
+    // ─── Suspension appeal events ─────────────────────────────────────────────
+    void sendAppealApproved(String toEmail, String userName);
+
+    void sendAppealRejected(String toEmail, String userName, String comment);
 }

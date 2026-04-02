@@ -19,6 +19,7 @@ import com.nuvi.online_renting.item.dto.ItemResponseDTO;
 import com.nuvi.online_renting.item.model.Item;
 import com.nuvi.online_renting.item.repository.ItemRepository;
 import com.nuvi.online_renting.item.service.ItemService;
+import com.nuvi.online_renting.currency.service.ExchangeRateService;
 import com.nuvi.online_renting.users.model.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -40,19 +41,22 @@ public class ItemServiceImpl implements ItemService {
     private final AuthenticationFacade authFacade;
     private final S3StorageService s3StorageService;
     private final FileValidator fileValidator;
+    private final ExchangeRateService exchangeRateService;
 
     public ItemServiceImpl(ItemRepository itemRepository,
                            CategoryRepository categoryRepository,
                            ItemBlockedDateRepository blockedDateRepository,
                            AuthenticationFacade authFacade,
                            S3StorageService s3StorageService,
-                           FileValidator fileValidator) {
+                           FileValidator fileValidator,
+                           ExchangeRateService exchangeRateService) {
         this.itemRepository = itemRepository;
         this.categoryRepository = categoryRepository;
         this.blockedDateRepository = blockedDateRepository;
         this.authFacade = authFacade;
         this.s3StorageService = s3StorageService;
         this.fileValidator = fileValidator;
+        this.exchangeRateService = exchangeRateService;
     }
 
     @Override
@@ -85,10 +89,10 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     @Transactional
-    public ItemResponseDTO getItemById(Long id) {
-        return itemRepository.findById(id)
-                .map(this::convertToResponseDTO)
+    public ItemResponseDTO getItemById(Long id, String currency) {
+        Item item = itemRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Item not found with id " + id));
+        return convertToResponseDTO(item, currency);
     }
 
     @Override
@@ -96,7 +100,7 @@ public class ItemServiceImpl implements ItemService {
     public PagedResponse<ItemResponseDTO> searchItems(String name, Double minPrice, Double maxPrice,
                                                       Boolean available, Long sellerId, Long categoryId,
                                                       Double lat, Double lng, Double radiusKm,
-                                                      Pageable pageable) {
+                                                      String currency, Pageable pageable) {
         // Location search: fetch candidates with coordinates, filter by Haversine in Java
         if (lat != null && lng != null && radiusKm != null) {
             List<Item> candidates = itemRepository.findItemsWithCoordinates(name, minPrice, maxPrice, available, sellerId, categoryId);
@@ -105,7 +109,7 @@ public class ItemServiceImpl implements ItemService {
             for (Item item : candidates) {
                 double distance = haversineKm(lat, lng, item.getLatitude(), item.getLongitude());
                 if (distance <= radiusKm) {
-                    ItemResponseDTO dto = convertToResponseDTO(item);
+                    ItemResponseDTO dto = convertToResponseDTO(item, currency);
                     dto.setDistanceKm(Math.round(distance * 10.0) / 10.0);
                     filtered.add(dto);
                 }
@@ -126,7 +130,7 @@ public class ItemServiceImpl implements ItemService {
 
         // Standard search without location
         Page<Item> page = itemRepository.searchItems(name, minPrice, maxPrice, available, sellerId, categoryId, pageable);
-        return new PagedResponse<>(page.map(this::convertToResponseDTO));
+        return new PagedResponse<>(page.map(item -> convertToResponseDTO(item, currency)));
     }
 
     /**
@@ -201,7 +205,7 @@ public class ItemServiceImpl implements ItemService {
     public PagedResponse<ItemResponseDTO> getMyItems(Pageable pageable) {
         Long sellerId = authFacade.getCurrentUser().getId();
         Page<Item> page = itemRepository.findBySellerId(sellerId, pageable);
-        return new PagedResponse<>(page.map(this::convertToResponseDTO));
+        return new PagedResponse<>(page.map(item -> convertToResponseDTO(item, null)));
     }
 
     @Override
@@ -320,6 +324,10 @@ public class ItemServiceImpl implements ItemService {
     }
 
     private ItemResponseDTO convertToResponseDTO(Item item) {
+        return convertToResponseDTO(item, null);
+    }
+
+    private ItemResponseDTO convertToResponseDTO(Item item, String currency) {
         ItemResponseDTO dto = new ItemResponseDTO();
         dto.setId(item.getId());
         dto.setName(item.getName());
@@ -338,6 +346,11 @@ public class ItemServiceImpl implements ItemService {
         }
         dto.setAverageRating(item.getAverageRating());
         dto.setTotalReviews(item.getTotalReviews());
+        // Currency conversion — display only, base currency is always LKR
+        if (currency != null && !currency.isBlank() && !currency.equalsIgnoreCase("LKR")) {
+            dto.setDisplayPrice(exchangeRateService.convert(item.getPricePerDay(), currency));
+            dto.setDisplayCurrency(currency.toUpperCase());
+        }
         dto.setCreatedAt(item.getCreatedAt());
         dto.setUpdatedAt(item.getUpdatedAt());
         dto.setCreatedBy(item.getCreatedBy());
