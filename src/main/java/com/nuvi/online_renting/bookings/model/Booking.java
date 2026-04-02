@@ -47,8 +47,10 @@ public class Booking {
     private LocalDateTime termsAcceptedAt;
     private String termsAcceptedIp;
 
-    // Seller rejection reason — set when seller rejects a PENDING booking
+    // Cancellation tracking — who cancelled, when, and why
     private String cancellationReason;
+    private String cancelledBy;       // email of the user who triggered the cancellation
+    private LocalDateTime cancelledAt;
 
     // Return tracking
     private LocalDateTime returnedAt;
@@ -186,4 +188,10 @@ public class Booking {
 
     public String getCancellationReason() { return cancellationReason; }
     public void setCancellationReason(String cancellationReason) { this.cancellationReason = cancellationReason; }
+
+    public String getCancelledBy() { return cancelledBy; }
+    public void setCancelledBy(String cancelledBy) { this.cancelledBy = cancelledBy; }
+
+    public LocalDateTime getCancelledAt() { return cancelledAt; }
+    public void setCancelledAt(LocalDateTime cancelledAt) { this.cancelledAt = cancelledAt; }
 }

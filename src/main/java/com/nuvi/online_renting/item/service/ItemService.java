@@ -1,10 +1,14 @@
 package com.nuvi.online_renting.item.service;
 
 import com.nuvi.online_renting.common.dto.PagedResponse;
+import com.nuvi.online_renting.item.dto.ItemBlockedDateRequestDTO;
+import com.nuvi.online_renting.item.dto.ItemBlockedDateResponseDTO;
 import com.nuvi.online_renting.item.dto.ItemRequestDTO;
 import com.nuvi.online_renting.item.dto.ItemResponseDTO;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 public interface ItemService {
 
@@ -28,4 +32,9 @@ public interface ItemService {
 
     // Returns the stored file path so the controller can serve it
     String getImagePath(Long id);
+
+    // Availability calendar — seller-managed blocked date ranges
+    ItemBlockedDateResponseDTO addBlockedDate(Long itemId, ItemBlockedDateRequestDTO dto);
+    List<ItemBlockedDateResponseDTO> getBlockedDates(Long itemId);
+    void removeBlockedDate(Long itemId, Long blockedDateId);
 }

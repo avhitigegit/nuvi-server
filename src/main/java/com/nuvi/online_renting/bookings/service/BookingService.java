@@ -27,6 +27,9 @@ public interface BookingService {
     // Seller/Admin: see active bookings on a specific item
     PagedResponse<BookingResponseDTO> getActiveBookingsByItem(Long itemId, Pageable pageable);
 
+    // Renter or Seller: PENDING/CONFIRMED → CANCELLED (proper soft cancel with audit trail)
+    BookingResponseDTO cancelBooking(Long id, String reason);
+
     // Seller: PENDING → CONFIRMED (seller accepts the booking)
     BookingResponseDTO confirmBooking(Long id);
 

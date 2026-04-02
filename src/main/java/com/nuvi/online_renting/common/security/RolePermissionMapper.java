@@ -26,7 +26,8 @@ public class RolePermissionMapper {
                     RAISE_DISPUTE,
                     VIEW_OWN_DISPUTES,
                     WRITE_REVIEW,
-                    VIEW_REVIEWS
+                    VIEW_REVIEWS,
+                    SEND_MESSAGE
             );
 
             case SELLER -> Set.of(
@@ -45,7 +46,8 @@ public class RolePermissionMapper {
                     RAISE_DISPUTE,
                     VIEW_OWN_DISPUTES,
                     WRITE_REVIEW,
-                    VIEW_REVIEWS
+                    VIEW_REVIEWS,
+                    SEND_MESSAGE
             );
 
             case ADMIN -> Set.of(

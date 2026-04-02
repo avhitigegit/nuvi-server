@@ -23,8 +23,10 @@ public class BookingResponseDTO {
     // Terms acceptance audit
     private LocalDateTime termsAcceptedAt;
 
-    // Seller rejection reason
+    // Cancellation tracking
     private String cancellationReason;
+    private String cancelledBy;
+    private LocalDateTime cancelledAt;
 
     // Return tracking
     private LocalDateTime returnedAt;

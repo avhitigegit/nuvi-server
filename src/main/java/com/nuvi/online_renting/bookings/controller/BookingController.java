@@ -79,7 +79,21 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.updateBooking(id, dto));
     }
 
-    @Operation(summary = "Delete a booking", description = "Permanently removes a booking record. This is a hard delete. To cancel a booking while keeping the record, use PATCH /{id}/status with status=CANCELLED instead.")
+    @Operation(
+            summary = "Cancel a booking",
+            description = "Cancels a PENDING or CONFIRMED booking with a mandatory reason. " +
+                          "Renter can cancel their own bookings. Seller can cancel bookings on their items. " +
+                          "Item availability is automatically restored if a CONFIRMED booking is cancelled. " +
+                          "The other party receives an email notification."
+    )
+    @PatchMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyAuthority('CANCEL_OWN_BOOKING', 'REJECT_OWN_BOOKING', 'FULL_ACCESS')")
+    public ResponseEntity<BookingResponseDTO> cancelBooking(@PathVariable Long id,
+                                                            @RequestParam String reason) {
+        return ResponseEntity.ok(bookingService.cancelBooking(id, reason));
+    }
+
+    @Operation(summary = "Delete a booking", description = "Hard delete — permanently removes a booking record. Prefer PATCH /{id}/cancel to keep the audit trail.")
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('CANCEL_OWN_BOOKING', 'FULL_ACCESS')")
     public ResponseEntity<Void> deleteBooking(@PathVariable Long id) {

@@ -3,6 +3,10 @@ package com.nuvi.online_renting.item.serviceImpl;
 import com.nuvi.online_renting.categories.model.Category;
 import com.nuvi.online_renting.categories.repository.CategoryRepository;
 import com.nuvi.online_renting.common.dto.PagedResponse;
+import com.nuvi.online_renting.item.dto.ItemBlockedDateRequestDTO;
+import com.nuvi.online_renting.item.dto.ItemBlockedDateResponseDTO;
+import com.nuvi.online_renting.item.model.ItemBlockedDate;
+import com.nuvi.online_renting.item.repository.ItemBlockedDateRepository;
 import com.nuvi.online_renting.common.enums.Role;
 import com.nuvi.online_renting.common.exceptions.BadRequestException;
 import com.nuvi.online_renting.common.exceptions.ForbiddenException;
@@ -32,17 +36,20 @@ public class ItemServiceImpl implements ItemService {
 
     private final ItemRepository itemRepository;
     private final CategoryRepository categoryRepository;
+    private final ItemBlockedDateRepository blockedDateRepository;
     private final AuthenticationFacade authFacade;
     private final S3StorageService s3StorageService;
     private final FileValidator fileValidator;
 
     public ItemServiceImpl(ItemRepository itemRepository,
                            CategoryRepository categoryRepository,
+                           ItemBlockedDateRepository blockedDateRepository,
                            AuthenticationFacade authFacade,
                            S3StorageService s3StorageService,
                            FileValidator fileValidator) {
         this.itemRepository = itemRepository;
         this.categoryRepository = categoryRepository;
+        this.blockedDateRepository = blockedDateRepository;
         this.authFacade = authFacade;
         this.s3StorageService = s3StorageService;
         this.fileValidator = fileValidator;
@@ -230,6 +237,80 @@ public class ItemServiceImpl implements ItemService {
                 .map(Item::getImageUrl)
                 .orElseThrow(() -> new ResourceNotFoundException("Item not found with id " + id));
         return s3StorageService.generateItemImageUrl(key);
+    }
+
+    @Override
+    @Transactional
+    public ItemBlockedDateResponseDTO addBlockedDate(Long itemId, ItemBlockedDateRequestDTO dto) {
+        Item item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found with id " + itemId));
+
+        User currentUser = authFacade.getCurrentUser();
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isOwner = item.getSeller().getId().equals(currentUser.getId());
+
+        if (!isAdmin && !isOwner) {
+            throw new ForbiddenException("You can only manage availability for your own items");
+        }
+
+        if (!dto.getEndDate().isAfter(dto.getStartDate()) && !dto.getEndDate().isEqual(dto.getStartDate())) {
+            throw new BadRequestException("End date must be on or after start date");
+        }
+
+        if (blockedDateRepository.existsOverlappingBlock(itemId, dto.getStartDate(), dto.getEndDate())) {
+            throw new BadRequestException("The selected date range overlaps with an existing blocked period");
+        }
+
+        ItemBlockedDate block = new ItemBlockedDate();
+        block.setItem(item);
+        block.setStartDate(dto.getStartDate());
+        block.setEndDate(dto.getEndDate());
+        block.setReason(dto.getReason());
+
+        return toBlockedDateDTO(blockedDateRepository.save(block));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ItemBlockedDateResponseDTO> getBlockedDates(Long itemId) {
+        if (!itemRepository.existsById(itemId)) {
+            throw new ResourceNotFoundException("Item not found with id " + itemId);
+        }
+        return blockedDateRepository.findByItemIdOrderByStartDateAsc(itemId)
+                .stream().map(this::toBlockedDateDTO).toList();
+    }
+
+    @Override
+    @Transactional
+    public void removeBlockedDate(Long itemId, Long blockedDateId) {
+        ItemBlockedDate block = blockedDateRepository.findById(blockedDateId)
+                .orElseThrow(() -> new ResourceNotFoundException("Blocked date not found with id " + blockedDateId));
+
+        if (!block.getItem().getId().equals(itemId)) {
+            throw new BadRequestException("Blocked date does not belong to item " + itemId);
+        }
+
+        User currentUser = authFacade.getCurrentUser();
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isOwner = block.getItem().getSeller().getId().equals(currentUser.getId());
+
+        if (!isAdmin && !isOwner) {
+            throw new ForbiddenException("You can only manage availability for your own items");
+        }
+
+        blockedDateRepository.delete(block);
+    }
+
+    private ItemBlockedDateResponseDTO toBlockedDateDTO(ItemBlockedDate block) {
+        ItemBlockedDateResponseDTO dto = new ItemBlockedDateResponseDTO();
+        dto.setId(block.getId());
+        dto.setItemId(block.getItem().getId());
+        dto.setStartDate(block.getStartDate());
+        dto.setEndDate(block.getEndDate());
+        dto.setReason(block.getReason());
+        dto.setCreatedAt(block.getCreatedAt());
+        dto.setCreatedBy(block.getCreatedBy());
+        return dto;
     }
 
     private Category resolveCategory(Long categoryId) {

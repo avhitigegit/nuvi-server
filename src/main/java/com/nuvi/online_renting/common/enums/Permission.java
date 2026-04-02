@@ -29,6 +29,9 @@ public enum Permission {
     RAISE_DISPUTE,
     VIEW_OWN_DISPUTES,
 
+    // Messaging
+    SEND_MESSAGE,
+
     // Reviews
     WRITE_REVIEW,
     VIEW_REVIEWS,

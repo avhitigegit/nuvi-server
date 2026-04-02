@@ -1,9 +1,14 @@
 package com.nuvi.online_renting.item.controller;
 
 import com.nuvi.online_renting.common.dto.PagedResponse;
+import com.nuvi.online_renting.item.dto.ItemBlockedDateRequestDTO;
+import com.nuvi.online_renting.item.dto.ItemBlockedDateResponseDTO;
 import com.nuvi.online_renting.item.dto.ItemRequestDTO;
 import com.nuvi.online_renting.item.dto.ItemResponseDTO;
 import com.nuvi.online_renting.item.service.ItemService;
+import jakarta.validation.Valid;
+
+import java.util.List;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -108,6 +113,44 @@ public class ItemController {
     public ResponseEntity<ItemResponseDTO> uploadImage(@PathVariable Long id,
                                                        @RequestParam("file") MultipartFile file) {
         return ResponseEntity.ok(itemService.uploadImage(id, file));
+    }
+
+    // ─── Availability Calendar ────────────────────────────────────────────────
+
+    @Operation(
+            summary = "Block a date range for an item",
+            description = "Seller blocks a date range on their item (e.g. maintenance, personal use). " +
+                          "Renters cannot book the item during this period. " +
+                          "Send startDate and endDate as YYYY-MM-DD."
+    )
+    @PostMapping("/{id}/blocked-dates")
+    @PreAuthorize("hasAnyAuthority('UPDATE_OWN_ITEM', 'FULL_ACCESS')")
+    public ResponseEntity<ItemBlockedDateResponseDTO> addBlockedDate(
+            @PathVariable Long id,
+            @Valid @RequestBody ItemBlockedDateRequestDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(itemService.addBlockedDate(id, dto));
+    }
+
+    @Operation(
+            summary = "Get blocked dates for an item",
+            description = "Returns all seller-blocked date ranges for an item. No authentication required. " +
+                          "Use this to render an availability calendar on the frontend."
+    )
+    @GetMapping("/{id}/blocked-dates")
+    public ResponseEntity<List<ItemBlockedDateResponseDTO>> getBlockedDates(@PathVariable Long id) {
+        return ResponseEntity.ok(itemService.getBlockedDates(id));
+    }
+
+    @Operation(
+            summary = "Remove a blocked date range",
+            description = "Seller removes a previously blocked date range from their item."
+    )
+    @DeleteMapping("/{id}/blocked-dates/{blockedDateId}")
+    @PreAuthorize("hasAnyAuthority('UPDATE_OWN_ITEM', 'FULL_ACCESS')")
+    public ResponseEntity<Void> removeBlockedDate(@PathVariable Long id,
+                                                   @PathVariable Long blockedDateId) {
+        itemService.removeBlockedDate(id, blockedDateId);
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Get item image", description = "Redirects to the item's image URL stored in AWS S3. No authentication required. Returns 404 if no image has been uploaded yet.")

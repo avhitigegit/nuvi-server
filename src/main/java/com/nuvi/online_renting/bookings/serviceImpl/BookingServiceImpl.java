@@ -2,6 +2,7 @@ package com.nuvi.online_renting.bookings.serviceImpl;
 
 import com.nuvi.online_renting.auth.service.EmailService;
 import com.nuvi.online_renting.bookings.dto.BookingRequestDTO;
+import com.nuvi.online_renting.item.repository.ItemBlockedDateRepository;
 import com.nuvi.online_renting.bookings.dto.BookingResponseDTO;
 import com.nuvi.online_renting.bookings.model.Booking;
 import com.nuvi.online_renting.bookings.repository.BookingRepository;
@@ -38,6 +39,7 @@ public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final ItemRepository itemRepository;
+    private final ItemBlockedDateRepository blockedDateRepository;
     private final AuthenticationFacade authFacade;
     private final EmailService emailService;
 
@@ -64,6 +66,10 @@ public class BookingServiceImpl implements BookingService {
 
         if (bookingRepository.existsOverlappingBooking(item.getId(), dto.getStartDate(), dto.getEndDate())) {
             throw new ConflictException("Item is already booked for the selected date range");
+        }
+
+        if (blockedDateRepository.existsOverlappingBlock(item.getId(), dto.getStartDate(), dto.getEndDate())) {
+            throw new ConflictException("The item is not available for the selected dates — the seller has blocked this period");
         }
 
         Booking booking = new Booking();
@@ -250,6 +256,55 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
+    public BookingResponseDTO cancelBooking(Long id, String reason) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id " + id));
+
+        User currentUser = authFacade.getCurrentUser();
+        boolean isAdmin    = currentUser.getRole() == Role.ADMIN;
+        boolean isRenter   = booking.getUser().getId().equals(currentUser.getId());
+        boolean isItemOwner = booking.getItem().getSeller().getId().equals(currentUser.getId());
+
+        if (!isAdmin && !isRenter && !isItemOwner) {
+            throw new ForbiddenException("You are not allowed to cancel this booking");
+        }
+
+        BookingStatus current = BookingStatus.valueOf(booking.getStatus());
+        if (current != BookingStatus.PENDING && current != BookingStatus.CONFIRMED) {
+            throw new BadRequestException("Only PENDING or CONFIRMED bookings can be cancelled. Current status: " + current);
+        }
+
+        booking.setStatus(BookingStatus.CANCELLED.name());
+        booking.setCancellationReason(reason);
+        booking.setCancelledBy(currentUser.getEmail());
+        booking.setCancelledAt(LocalDateTime.now());
+
+        // Restore item availability when a confirmed booking is cancelled
+        if (current == BookingStatus.CONFIRMED) {
+            booking.getItem().setAvailable(true);
+            itemRepository.save(booking.getItem());
+        }
+
+        log.info("Booking {} cancelled by {} ({})", id, currentUser.getEmail(),
+                isRenter ? "renter" : isItemOwner ? "seller" : "admin");
+
+        BookingResponseDTO result = convertToDTO(bookingRepository.save(booking));
+
+        // Notify the other party
+        User renter = booking.getUser();
+        User seller = booking.getItem().getSeller();
+        String itemName = booking.getItem().getName();
+        if (isRenter) {
+            emailService.sendBookingCancelledToSeller(seller.getEmail(), seller.getName(), renter.getName(), itemName);
+        } else {
+            emailService.sendBookingCancelledToRenter(renter.getEmail(), renter.getName(), itemName);
+        }
+
+        return result;
+    }
+
+    @Override
+    @Transactional
     public BookingResponseDTO confirmBooking(Long id) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id " + id));
@@ -328,6 +383,8 @@ public class BookingServiceImpl implements BookingService {
         dto.setReturnedAt(booking.getReturnedAt());
         dto.setReturnNote(booking.getReturnNote());
         dto.setCancellationReason(booking.getCancellationReason());
+        dto.setCancelledBy(booking.getCancelledBy());
+        dto.setCancelledAt(booking.getCancelledAt());
         dto.setCreatedAt(booking.getCreatedAt());
         dto.setUpdatedAt(booking.getUpdatedAt());
         dto.setCreatedBy(booking.getCreatedBy());

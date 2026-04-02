@@ -15,6 +15,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+
 @Repository
 public interface ItemRepository extends JpaRepository<Item, Long> {
 
@@ -63,4 +64,9 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                                         @Param("available") Boolean available,
                                         @Param("sellerId") Long sellerId,
                                         @Param("categoryId") Long categoryId);
+
+    // ─── Dashboard queries ────────────────────────────────────────────────────
+    long countBySellerId(Long sellerId);
+
+    long countBySellerIdAndAvailable(Long sellerId, boolean available);
 }
