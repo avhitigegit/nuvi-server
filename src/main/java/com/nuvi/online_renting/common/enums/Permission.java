@@ -18,6 +18,8 @@ public enum Permission {
     CREATE_BOOKING,
     VIEW_OWN_BOOKINGS,
     CANCEL_OWN_BOOKING,
+    CONFIRM_OWN_BOOKING,
+    REJECT_OWN_BOOKING,
 
     // Seller
     APPLY_SELLER,
@@ -38,6 +40,8 @@ public enum Permission {
     UPDATE_BOOKING_STATUS,
     MANAGE_DISPUTES,
     SUSPEND_SELLER,
+    MANAGE_CATEGORIES,
+    MANAGE_KYC,
     FULL_ACCESS
 
     }

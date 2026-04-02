@@ -1,5 +1,6 @@
 package com.nuvi.online_renting.disputes.serviceImpl;
 
+import com.nuvi.online_renting.auth.service.EmailService;
 import com.nuvi.online_renting.bookings.model.Booking;
 import com.nuvi.online_renting.bookings.repository.BookingRepository;
 import com.nuvi.online_renting.common.dto.PagedResponse;
@@ -37,6 +38,7 @@ public class DisputeServiceImpl implements DisputeService {
     private final DisputeRepository disputeRepository;
     private final BookingRepository bookingRepository;
     private final AuthenticationFacade authFacade;
+    private final EmailService emailService;
 
     @Override
     @Transactional
@@ -71,6 +73,14 @@ public class DisputeServiceImpl implements DisputeService {
 
         DisputeResponseDTO result = toDTO(disputeRepository.save(dispute));
         log.info("Dispute {} raised by user {} for booking {}", result.getId(), currentUser.getId(), dto.getBookingId());
+
+        // Notify the seller
+        User seller = booking.getItem().getSeller();
+        emailService.sendDisputeRaisedToSeller(
+                seller.getEmail(), seller.getName(),
+                currentUser.getName(), booking.getItem().getName(),
+                dto.getReason().name());
+
         return result;
     }
 
@@ -126,7 +136,15 @@ public class DisputeServiceImpl implements DisputeService {
         dispute.setResolvedAt(LocalDateTime.now());
 
         log.info("Dispute {} resolved by admin", id);
-        return toDTO(disputeRepository.save(dispute));
+        DisputeResponseDTO resolved = toDTO(disputeRepository.save(dispute));
+
+        User renter = dispute.getRaisedBy();
+        emailService.sendDisputeResolvedToRenter(
+                renter.getEmail(), renter.getName(),
+                dispute.getBooking().getItem().getName(),
+                dto.getResolutionNote());
+
+        return resolved;
     }
 
     @Override
@@ -143,7 +161,15 @@ public class DisputeServiceImpl implements DisputeService {
         dispute.setResolvedAt(LocalDateTime.now());
 
         log.info("Dispute {} rejected by admin", id);
-        return toDTO(disputeRepository.save(dispute));
+        DisputeResponseDTO rejected = toDTO(disputeRepository.save(dispute));
+
+        User renter = dispute.getRaisedBy();
+        emailService.sendDisputeRejectedToRenter(
+                renter.getEmail(), renter.getName(),
+                dispute.getBooking().getItem().getName(),
+                dto.getResolutionNote());
+
+        return rejected;
     }
 
     private Dispute findDispute(Long id) {

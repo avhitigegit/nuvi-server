@@ -115,6 +115,31 @@ public class BookingController {
     }
 
     @Operation(
+            summary = "Confirm a booking (Seller / Admin)",
+            description = "Seller confirms a PENDING booking for their own item. " +
+                          "Status changes from PENDING to CONFIRMED and item availability is set to false. " +
+                          "ADMIN can confirm any booking."
+    )
+    @PatchMapping("/{id}/confirm")
+    @PreAuthorize("hasAnyAuthority('CONFIRM_OWN_BOOKING', 'FULL_ACCESS')")
+    public ResponseEntity<BookingResponseDTO> confirmBooking(@PathVariable Long id) {
+        return ResponseEntity.ok(bookingService.confirmBooking(id));
+    }
+
+    @Operation(
+            summary = "Reject a booking (Seller / Admin)",
+            description = "Seller rejects a PENDING booking for their own item. " +
+                          "Status changes to CANCELLED. A reason is required. " +
+                          "ADMIN can reject any booking."
+    )
+    @PatchMapping("/{id}/reject")
+    @PreAuthorize("hasAnyAuthority('REJECT_OWN_BOOKING', 'FULL_ACCESS')")
+    public ResponseEntity<BookingResponseDTO> rejectBooking(@PathVariable Long id,
+                                                            @RequestParam String reason) {
+        return ResponseEntity.ok(bookingService.rejectBooking(id, reason));
+    }
+
+    @Operation(
             summary = "Get active bookings for an item (Seller / Admin)",
             description = "Returns all PENDING and CONFIRMED bookings for a specific item. " +
                           "Useful for sellers to see who has booked their item and when. " +

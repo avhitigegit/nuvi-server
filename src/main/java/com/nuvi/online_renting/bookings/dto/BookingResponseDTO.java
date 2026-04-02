@@ -23,6 +23,9 @@ public class BookingResponseDTO {
     // Terms acceptance audit
     private LocalDateTime termsAcceptedAt;
 
+    // Seller rejection reason
+    private String cancellationReason;
+
     // Return tracking
     private LocalDateTime returnedAt;
     private String returnNote;

@@ -24,6 +24,24 @@ public class ItemResponseDTO {
     private Double longitude;
     private Double distanceKm; // populated only when location search is used
 
+    private Long categoryId;
+    private String categoryName;
+
+    private double averageRating;
+    private int totalReviews;
+
+    public Long getCategoryId() { return categoryId; }
+    public void setCategoryId(Long categoryId) { this.categoryId = categoryId; }
+
+    public String getCategoryName() { return categoryName; }
+    public void setCategoryName(String categoryName) { this.categoryName = categoryName; }
+
+    public double getAverageRating() { return averageRating; }
+    public void setAverageRating(double averageRating) { this.averageRating = averageRating; }
+
+    public int getTotalReviews() { return totalReviews; }
+    public void setTotalReviews(int totalReviews) { this.totalReviews = totalReviews; }
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String createdBy;

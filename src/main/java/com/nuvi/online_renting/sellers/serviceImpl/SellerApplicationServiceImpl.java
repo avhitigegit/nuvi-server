@@ -1,5 +1,6 @@
 package com.nuvi.online_renting.sellers.serviceImpl;
 
+import com.nuvi.online_renting.auth.service.EmailService;
 import com.nuvi.online_renting.common.enums.Role;
 import com.nuvi.online_renting.common.enums.SellerStatus;
 import com.nuvi.online_renting.common.exceptions.BadRequestException;
@@ -37,6 +38,7 @@ public class SellerApplicationServiceImpl implements SellerApplicationService {
     private final UserRepository userRepository;
     private final AuthenticationFacade authFacade;
     private final S3StorageService s3StorageService;
+    private final EmailService emailService;
 
 //    @Override
 //    @Transactional
@@ -174,6 +176,13 @@ public class SellerApplicationServiceImpl implements SellerApplicationService {
         userRepository.save(user);
         sellerApplication = sellerApplicationRepository.save(sellerApplication);
         log.info("Seller application {} decided by {}: status={}", id, adminEmail, decision.getStatus());
+
+        if (decision.getStatus() == SellerStatus.APPROVED) {
+            emailService.sendSellerApplicationApproved(user.getEmail(), user.getName());
+        } else if (decision.getStatus() == SellerStatus.REJECTED) {
+            emailService.sendSellerApplicationRejected(user.getEmail(), user.getName(), decision.getComment());
+        }
+
         // Admin decision — return full unmasked data
         return sellerApplicationToSellerApplicationResponseDTO(sellerApplication, true);
     }
@@ -198,6 +207,7 @@ public class SellerApplicationServiceImpl implements SellerApplicationService {
         user.setSuspendedBy(adminEmail);
         userRepository.save(user);
         log.info("Seller {} suspended by admin {} — reason: {}", userId, adminEmail, dto.getReason());
+        emailService.sendSellerSuspended(user.getEmail(), user.getName(), dto.getReason());
     }
 
     @Override
@@ -220,6 +230,7 @@ public class SellerApplicationServiceImpl implements SellerApplicationService {
         user.setSuspendedBy(null);
         userRepository.save(user);
         log.info("Seller {} unsuspended by admin {}", userId, adminEmail);
+        emailService.sendSellerUnsuspended(user.getEmail(), user.getName());
     }
 
     /**

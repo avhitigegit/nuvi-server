@@ -1,5 +1,6 @@
 package com.nuvi.online_renting.item.model;
 
+import com.nuvi.online_renting.categories.model.Category;
 import com.nuvi.online_renting.users.model.User;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -42,8 +43,19 @@ public class Item {
     @JoinColumn(name = "seller_id", nullable = false)
     private User seller;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
+
     // Stored file path on disk
     private String imageUrl;
+
+    // Item-level rating (updated when item reviews are submitted)
+    @Column(nullable = false)
+    private double averageRating = 0.0;
+
+    @Column(nullable = false)
+    private int totalReviews = 0;
 
     // ─── Location ──────────────────────────────────────────────────────────────
     private Double latitude;
@@ -89,8 +101,17 @@ public class Item {
     public User getSeller() { return seller; }
     public void setSeller(User seller) { this.seller = seller; }
 
+    public Category getCategory() { return category; }
+    public void setCategory(Category category) { this.category = category; }
+
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+
+    public double getAverageRating() { return averageRating; }
+    public void setAverageRating(double averageRating) { this.averageRating = averageRating; }
+
+    public int getTotalReviews() { return totalReviews; }
+    public void setTotalReviews(int totalReviews) { this.totalReviews = totalReviews; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

@@ -13,7 +13,7 @@ public interface ItemService {
     ItemResponseDTO getItemById(Long id);
 
     PagedResponse<ItemResponseDTO> searchItems(String name, Double minPrice, Double maxPrice,
-                                               Boolean available, Long sellerId,
+                                               Boolean available, Long sellerId, Long categoryId,
                                                Double lat, Double lng, Double radiusKm,
                                                Pageable pageable);
 

@@ -19,6 +19,7 @@ public class ItemRequestDTO {
     private Boolean available;
     private Double latitude;
     private Double longitude;
+    private Long categoryId;
 
     public ItemRequestDTO() {
     }
@@ -76,4 +77,7 @@ public class ItemRequestDTO {
 
     public Double getLongitude() { return longitude; }
     public void setLongitude(Double longitude) { this.longitude = longitude; }
+
+    public Long getCategoryId() { return categoryId; }
+    public void setCategoryId(Long categoryId) { this.categoryId = categoryId; }
 }

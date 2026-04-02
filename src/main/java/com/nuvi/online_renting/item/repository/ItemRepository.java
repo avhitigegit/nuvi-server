@@ -37,12 +37,14 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
             "(:minPrice IS NULL OR i.pricePerDay >= :minPrice) AND " +
             "(:maxPrice IS NULL OR i.pricePerDay <= :maxPrice) AND " +
             "(:available IS NULL OR i.available = :available) AND " +
-            "(:sellerId IS NULL OR i.seller.id = :sellerId)")
+            "(:sellerId IS NULL OR i.seller.id = :sellerId) AND " +
+            "(:categoryId IS NULL OR i.category.id = :categoryId)")
     Page<Item> searchItems(@Param("name") String name,
                            @Param("minPrice") Double minPrice,
                            @Param("maxPrice") Double maxPrice,
                            @Param("available") Boolean available,
                            @Param("sellerId") Long sellerId,
+                           @Param("categoryId") Long categoryId,
                            Pageable pageable);
 
     // Location pre-filter — returns items that have coordinates and match all other filters
@@ -53,10 +55,12 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
             "(:minPrice IS NULL OR i.pricePerDay >= :minPrice) AND " +
             "(:maxPrice IS NULL OR i.pricePerDay <= :maxPrice) AND " +
             "(:available IS NULL OR i.available = :available) AND " +
-            "(:sellerId IS NULL OR i.seller.id = :sellerId)")
+            "(:sellerId IS NULL OR i.seller.id = :sellerId) AND " +
+            "(:categoryId IS NULL OR i.category.id = :categoryId)")
     List<Item> findItemsWithCoordinates(@Param("name") String name,
                                         @Param("minPrice") Double minPrice,
                                         @Param("maxPrice") Double maxPrice,
                                         @Param("available") Boolean available,
-                                        @Param("sellerId") Long sellerId);
+                                        @Param("sellerId") Long sellerId,
+                                        @Param("categoryId") Long categoryId);
 }

@@ -63,13 +63,14 @@ public class ItemController {
             @RequestParam(required = false) Double maxPrice,
             @RequestParam(required = false) Boolean available,
             @RequestParam(required = false) Long sellerId,
+            @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) Double lat,
             @RequestParam(required = false) Double lng,
             @RequestParam(required = false) Double radiusKm,
             @PageableDefault(size = 10, sort = "id") Pageable pageable) {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.maxAge(30, TimeUnit.SECONDS).cachePublic())
-                .body(itemService.searchItems(name, minPrice, maxPrice, available, sellerId, lat, lng, radiusKm, pageable));
+                .body(itemService.searchItems(name, minPrice, maxPrice, available, sellerId, categoryId, lat, lng, radiusKm, pageable));
     }
 
     @Operation(summary = "Get my item listings", description = "Returns a paginated list of all items created by the currently logged-in seller. Requires SELLER or ADMIN role.")

@@ -1,5 +1,7 @@
 package com.nuvi.online_renting.item.serviceImpl;
 
+import com.nuvi.online_renting.categories.model.Category;
+import com.nuvi.online_renting.categories.repository.CategoryRepository;
 import com.nuvi.online_renting.common.dto.PagedResponse;
 import com.nuvi.online_renting.common.enums.Role;
 import com.nuvi.online_renting.common.exceptions.BadRequestException;
@@ -29,15 +31,18 @@ import java.util.List;
 public class ItemServiceImpl implements ItemService {
 
     private final ItemRepository itemRepository;
+    private final CategoryRepository categoryRepository;
     private final AuthenticationFacade authFacade;
     private final S3StorageService s3StorageService;
     private final FileValidator fileValidator;
 
     public ItemServiceImpl(ItemRepository itemRepository,
+                           CategoryRepository categoryRepository,
                            AuthenticationFacade authFacade,
                            S3StorageService s3StorageService,
                            FileValidator fileValidator) {
         this.itemRepository = itemRepository;
+        this.categoryRepository = categoryRepository;
         this.authFacade = authFacade;
         this.s3StorageService = s3StorageService;
         this.fileValidator = fileValidator;
@@ -66,6 +71,7 @@ public class ItemServiceImpl implements ItemService {
         item.setSeller(currentUser);
         item.setLatitude(dto.getLatitude());
         item.setLongitude(dto.getLongitude());
+        item.setCategory(resolveCategory(dto.getCategoryId()));
 
         return convertToResponseDTO(itemRepository.save(item));
     }
@@ -81,12 +87,12 @@ public class ItemServiceImpl implements ItemService {
     @Override
     @Transactional
     public PagedResponse<ItemResponseDTO> searchItems(String name, Double minPrice, Double maxPrice,
-                                                      Boolean available, Long sellerId,
+                                                      Boolean available, Long sellerId, Long categoryId,
                                                       Double lat, Double lng, Double radiusKm,
                                                       Pageable pageable) {
         // Location search: fetch candidates with coordinates, filter by Haversine in Java
         if (lat != null && lng != null && radiusKm != null) {
-            List<Item> candidates = itemRepository.findItemsWithCoordinates(name, minPrice, maxPrice, available, sellerId);
+            List<Item> candidates = itemRepository.findItemsWithCoordinates(name, minPrice, maxPrice, available, sellerId, categoryId);
 
             List<ItemResponseDTO> filtered = new ArrayList<>();
             for (Item item : candidates) {
@@ -112,7 +118,7 @@ public class ItemServiceImpl implements ItemService {
         }
 
         // Standard search without location
-        Page<Item> page = itemRepository.searchItems(name, minPrice, maxPrice, available, sellerId, pageable);
+        Page<Item> page = itemRepository.searchItems(name, minPrice, maxPrice, available, sellerId, categoryId, pageable);
         return new PagedResponse<>(page.map(this::convertToResponseDTO));
     }
 
@@ -159,6 +165,7 @@ public class ItemServiceImpl implements ItemService {
         }
         item.setLatitude(dto.getLatitude());
         item.setLongitude(dto.getLongitude());
+        item.setCategory(resolveCategory(dto.getCategoryId()));
 
         return convertToResponseDTO(itemRepository.save(item));
     }
@@ -225,6 +232,12 @@ public class ItemServiceImpl implements ItemService {
         return s3StorageService.generateItemImageUrl(key);
     }
 
+    private Category resolveCategory(Long categoryId) {
+        if (categoryId == null) return null;
+        return categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found with id " + categoryId));
+    }
+
     private ItemResponseDTO convertToResponseDTO(Item item) {
         ItemResponseDTO dto = new ItemResponseDTO();
         dto.setId(item.getId());
@@ -238,6 +251,12 @@ public class ItemServiceImpl implements ItemService {
         dto.setImageUrl(s3StorageService.generateItemImageUrl(item.getImageUrl()));
         dto.setLatitude(item.getLatitude());
         dto.setLongitude(item.getLongitude());
+        if (item.getCategory() != null) {
+            dto.setCategoryId(item.getCategory().getId());
+            dto.setCategoryName(item.getCategory().getName());
+        }
+        dto.setAverageRating(item.getAverageRating());
+        dto.setTotalReviews(item.getTotalReviews());
         dto.setCreatedAt(item.getCreatedAt());
         dto.setUpdatedAt(item.getUpdatedAt());
         dto.setCreatedBy(item.getCreatedBy());

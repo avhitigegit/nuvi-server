@@ -26,4 +26,10 @@ public interface BookingService {
 
     // Seller/Admin: see active bookings on a specific item
     PagedResponse<BookingResponseDTO> getActiveBookingsByItem(Long itemId, Pageable pageable);
+
+    // Seller: PENDING → CONFIRMED (seller accepts the booking)
+    BookingResponseDTO confirmBooking(Long id);
+
+    // Seller: PENDING → CANCELLED (seller rejects the booking)
+    BookingResponseDTO rejectBooking(Long id, String reason);
 }
