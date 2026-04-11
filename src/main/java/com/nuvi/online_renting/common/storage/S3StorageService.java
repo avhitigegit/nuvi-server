@@ -130,6 +130,15 @@ public class S3StorageService {
         return generatePresignedUrl(key, docUrlExpiryMinutes);
     }
 
+    /**
+     * Convenience method — generates a pre-signed URL for a user profile picture (60 min).
+     * Returns null if the key is null or blank (user has no picture yet).
+     */
+    public String generateProfilePictureUrl(String key) {
+        if (key == null || key.isBlank()) return null;
+        return generatePresignedUrl(key, itemImageExpiryMinutes);
+    }
+
     // ─── Delete ────────────────────────────────────────────────────────────────
 
     /**

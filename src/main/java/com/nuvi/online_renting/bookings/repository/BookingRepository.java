@@ -47,19 +47,48 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.item.seller.id = :sellerId AND b.createdAt >= :from")
     long countBySellerIdSince(@Param("sellerId") Long sellerId, @Param("from") LocalDateTime from);
 
-    // Earnings: sum of pricePerDay * (endDate - startDate) for COMPLETED bookings
-    @Query("SELECT COALESCE(SUM(b.item.pricePerDay * (FUNCTION('DATEDIFF', b.endDate, b.startDate))), 0) " +
+    // Earnings: sum of stored totalAmount for COMPLETED bookings (already accounts for discounts)
+    @Query("SELECT COALESCE(SUM(b.totalAmount), 0) " +
            "FROM Booking b WHERE b.item.seller.id = :sellerId AND b.status = 'COMPLETED'")
     double sumEarningsBySellerId(@Param("sellerId") Long sellerId);
 
-    @Query("SELECT COALESCE(SUM(b.item.pricePerDay * (FUNCTION('DATEDIFF', b.endDate, b.startDate))), 0) " +
+    @Query("SELECT COALESCE(SUM(b.totalAmount), 0) " +
            "FROM Booking b WHERE b.item.seller.id = :sellerId AND b.status = 'COMPLETED' AND b.updatedAt >= :from")
     double sumEarningsBySellerIdSince(@Param("sellerId") Long sellerId, @Param("from") LocalDateTime from);
 
     // Top 5 items by completed booking count for a seller
-    @Query("SELECT b.item.id, b.item.name, COUNT(b), " +
-           "COALESCE(SUM(b.item.pricePerDay * (FUNCTION('DATEDIFF', b.endDate, b.startDate))), 0) " +
+    @Query("SELECT b.item.id, b.item.name, COUNT(b), COALESCE(SUM(b.totalAmount), 0) " +
            "FROM Booking b WHERE b.item.seller.id = :sellerId AND b.status = 'COMPLETED' " +
            "GROUP BY b.item.id, b.item.name ORDER BY COUNT(b) DESC")
     List<Object[]> findTopItemsBySellerId(@Param("sellerId") Long sellerId, Pageable pageable);
+
+    // ─── Admin analytics — platform-wide queries ──────────────────────────────
+
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.status = :status")
+    long countByStatus(@Param("status") String status);
+
+    @Query("SELECT COALESCE(SUM(b.totalAmount), 0) FROM Booking b WHERE b.status = 'COMPLETED'")
+    double sumTotalRevenue();
+
+    /**
+     * Daily booking counts for the last :days days.
+     * Returns Object[]{dateString, count} ordered by date ascending.
+     */
+    @Query("SELECT FUNCTION('DATE_FORMAT', b.createdAt, '%Y-%m-%d'), COUNT(b) " +
+           "FROM Booking b " +
+           "WHERE b.createdAt >= :from " +
+           "GROUP BY FUNCTION('DATE_FORMAT', b.createdAt, '%Y-%m-%d') " +
+           "ORDER BY FUNCTION('DATE_FORMAT', b.createdAt, '%Y-%m-%d') ASC")
+    List<Object[]> findDailyBookingCounts(@Param("from") LocalDateTime from);
+
+    /**
+     * Daily revenue (COMPLETED bookings) for the last :days days.
+     * Returns Object[]{dateString, revenue} ordered by date ascending.
+     */
+    @Query("SELECT FUNCTION('DATE_FORMAT', b.updatedAt, '%Y-%m-%d'), COALESCE(SUM(b.totalAmount), 0) " +
+           "FROM Booking b " +
+           "WHERE b.status = 'COMPLETED' AND b.updatedAt >= :from " +
+           "GROUP BY FUNCTION('DATE_FORMAT', b.updatedAt, '%Y-%m-%d') " +
+           "ORDER BY FUNCTION('DATE_FORMAT', b.updatedAt, '%Y-%m-%d') ASC")
+    List<Object[]> findDailyRevenue(@Param("from") LocalDateTime from);
 }

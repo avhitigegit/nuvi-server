@@ -1,8 +1,11 @@
 package com.nuvi.online_renting.users.dto;
 
+import com.nuvi.online_renting.common.enums.Role;
+
 public class UserProfileResponse {
     private String name;
     private String email;
+    private Role role;
     private String phone;
     private String address;
     private String nicNumber;
@@ -24,6 +27,14 @@ public class UserProfileResponse {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
     }
 
     public String getPhone() {

@@ -3,6 +3,7 @@ package com.nuvi.online_renting.item.dto;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class ItemResponseDTO {
@@ -17,7 +18,8 @@ public class ItemResponseDTO {
     private Long sellerId;
     private String sellerName;
 
-    private String imageUrl;
+    private String imageUrl;                // primary image (legacy field, kept for compatibility)
+    private List<String> images;            // gallery — all image pre-signed URLs ordered by displayOrder
 
     // Location
     private Double latitude;

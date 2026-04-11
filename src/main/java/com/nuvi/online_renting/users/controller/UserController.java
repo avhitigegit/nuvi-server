@@ -4,6 +4,7 @@ import com.nuvi.online_renting.common.audit.Auditable;
 import com.nuvi.online_renting.common.dto.ApiResponse;
 import com.nuvi.online_renting.common.dto.PagedResponse;
 import com.nuvi.online_renting.common.enums.Role;
+import com.nuvi.online_renting.users.dto.ChangePasswordRequest;
 import com.nuvi.online_renting.users.dto.UserProfileRequest;
 import com.nuvi.online_renting.users.dto.UserProfileResponse;
 import com.nuvi.online_renting.users.dto.UserRequestDTO;
@@ -17,6 +18,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -112,6 +114,30 @@ public class UserController {
         userService.deleteMyAccount();
         return ResponseEntity.ok(new ApiResponse<>(true,
                 "Your account and all personal data have been permanently erased.", null));
+    }
+
+    @Operation(
+            summary = "Change my password",
+            description = "Allows the currently logged-in user to change their password by providing their current password and a new one. " +
+                          "Requires at least 8 characters for the new password."
+    )
+    @PatchMapping("/me/password")
+    @PreAuthorize("hasAuthority('UPDATE_OWN_PROFILE')")
+    public ResponseEntity<ApiResponse<Void>> changePassword(@Valid @RequestBody ChangePasswordRequest req) {
+        userService.changePassword(req);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Password changed successfully.", null));
+    }
+
+    @Operation(
+            summary = "Upload my profile picture",
+            description = "Upload a profile photo for the currently logged-in user. Send as multipart/form-data with field name 'file'. " +
+                          "Allowed formats: jpg, jpeg, png, gif, webp. Max size: 50MB. " +
+                          "Returns the updated profile with a pre-signed URL for the uploaded image."
+    )
+    @PostMapping("/me/picture")
+    @PreAuthorize("hasAuthority('UPDATE_OWN_PROFILE')")
+    public ResponseEntity<UserProfileResponse> uploadProfilePicture(@RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(userService.uploadProfilePicture(file));
     }
 
     @Operation(

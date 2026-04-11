@@ -246,6 +246,14 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id " + bookingId));
 
+        User currentUser = authFacade.getCurrentUser();
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isItemOwner = booking.getItem().getSeller().getId().equals(currentUser.getId());
+
+        if (!isAdmin && !isItemOwner) {
+            throw new ForbiddenException("You can only mark completed bookings for your own items");
+        }
+
         if (!BookingStatus.CONFIRMED.name().equals(booking.getStatus())) {
             throw new BadRequestException("Only CONFIRMED bookings can be marked as completed");
         }

@@ -2,11 +2,13 @@ package com.nuvi.online_renting.users.service;
 
 import com.nuvi.online_renting.common.dto.PagedResponse;
 import com.nuvi.online_renting.common.enums.Role;
+import com.nuvi.online_renting.users.dto.ChangePasswordRequest;
 import com.nuvi.online_renting.users.dto.UserProfileRequest;
 import com.nuvi.online_renting.users.dto.UserProfileResponse;
 import com.nuvi.online_renting.users.dto.UserRequestDTO;
 import com.nuvi.online_renting.users.dto.UserResponseDTO;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface UserService {
 
@@ -29,4 +31,8 @@ public interface UserService {
     void deactivateMyAccount();
 
     UserResponseDTO updateKycStatus(Long userId, boolean kycVerified);
+
+    void changePassword(ChangePasswordRequest req);
+
+    UserProfileResponse uploadProfilePicture(MultipartFile file);
 }

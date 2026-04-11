@@ -3,8 +3,12 @@ package com.nuvi.online_renting.users.serviceImpl;
 import com.nuvi.online_renting.auth.service.RefreshTokenService;
 import com.nuvi.online_renting.common.dto.PagedResponse;
 import com.nuvi.online_renting.common.enums.Role;
+import com.nuvi.online_renting.common.exceptions.BadRequestException;
 import com.nuvi.online_renting.common.exceptions.ResourceNotFoundException;
 import com.nuvi.online_renting.common.security.AuthenticationFacade;
+import com.nuvi.online_renting.common.storage.S3StorageService;
+import com.nuvi.online_renting.common.validation.FileValidator;
+import com.nuvi.online_renting.users.dto.ChangePasswordRequest;
 import com.nuvi.online_renting.users.dto.UserProfileRequest;
 import com.nuvi.online_renting.users.dto.UserProfileResponse;
 import com.nuvi.online_renting.users.dto.UserRequestDTO;
@@ -19,6 +23,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 
@@ -31,15 +36,21 @@ public class UserServiceImpl implements UserService {
     private final AuthenticationFacade authenticationFacade;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
+    private final S3StorageService s3StorageService;
+    private final FileValidator fileValidator;
 
     public UserServiceImpl(UserRepository userRepository,
                            AuthenticationFacade authenticationFacade,
                            PasswordEncoder passwordEncoder,
-                           RefreshTokenService refreshTokenService) {
+                           RefreshTokenService refreshTokenService,
+                           S3StorageService s3StorageService,
+                           FileValidator fileValidator) {
         this.userRepository = userRepository;
         this.authenticationFacade = authenticationFacade;
         this.passwordEncoder = passwordEncoder;
         this.refreshTokenService = refreshTokenService;
+        this.s3StorageService = s3StorageService;
+        this.fileValidator = fileValidator;
     }
 
     @Override
@@ -144,6 +155,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public UserProfileResponse getMyProfile() {
         return mapToProfileResponse(authenticationFacade.getCurrentUser());
     }
@@ -178,6 +190,34 @@ public class UserServiceImpl implements UserService {
         return mapToResponseDTO(userRepository.save(user));
     }
 
+    @Override
+    @Transactional
+    public void changePassword(ChangePasswordRequest req) {
+        User user = authenticationFacade.getCurrentUser();
+        if (!passwordEncoder.matches(req.getCurrentPassword(), user.getPassword())) {
+            throw new BadRequestException("Current password is incorrect");
+        }
+        user.setPassword(passwordEncoder.encode(req.getNewPassword()));
+        userRepository.save(user);
+        log.info("Password changed for user {}", user.getId());
+    }
+
+    @Override
+    @Transactional
+    public UserProfileResponse uploadProfilePicture(MultipartFile file) {
+        fileValidator.validateImage(file);
+        User user = authenticationFacade.getCurrentUser();
+
+        String originalFilename = file.getOriginalFilename();
+        String ext = originalFilename.substring(originalFilename.lastIndexOf('.') + 1).toLowerCase();
+        String s3Key = "profiles/user_" + user.getId() + "_" + System.currentTimeMillis() + "." + ext;
+        s3StorageService.uploadFile(s3Key, file);
+
+        user.setProfilePictureUrl(s3Key);
+        log.info("Profile picture uploaded for user {}", user.getId());
+        return mapToProfileResponse(userRepository.save(user));
+    }
+
     private UserResponseDTO mapToResponseDTO(User user) {
         UserResponseDTO dto = new UserResponseDTO();
         dto.setId(user.getId());
@@ -199,10 +239,11 @@ public class UserServiceImpl implements UserService {
         UserProfileResponse res = new UserProfileResponse();
         res.setName(user.getName());
         res.setEmail(user.getEmail());
+        res.setRole(user.getRole());
         res.setPhone(user.getPhone());
         res.setAddress(user.getAddress());
         res.setNicNumber(user.getNicNumber());
-        res.setProfilePictureUrl(user.getProfilePictureUrl());
+        res.setProfilePictureUrl(s3StorageService.generateProfilePictureUrl(user.getProfilePictureUrl()));
         res.setKycVerified(user.isKycVerified());
         res.setPhoneVerified(user.isPhoneVerified());
         return res;

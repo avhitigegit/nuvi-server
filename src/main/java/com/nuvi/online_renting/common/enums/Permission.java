@@ -20,6 +20,7 @@ public enum Permission {
     CANCEL_OWN_BOOKING,
     CONFIRM_OWN_BOOKING,
     REJECT_OWN_BOOKING,
+    COMPLETE_OWN_BOOKING,
 
     // Seller
     APPLY_SELLER,

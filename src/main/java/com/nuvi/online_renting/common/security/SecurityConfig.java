@@ -90,6 +90,7 @@ public class SecurityConfig {
                 })
 
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/ws/**").permitAll()   // WebSocket handshake — JWT auth handled in STOMP interceptor
                         .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh",
                                          "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password",
                                          "/api/v1/auth/verify-email", "/api/v1/auth/resend-verification").permitAll()

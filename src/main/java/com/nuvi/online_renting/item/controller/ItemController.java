@@ -3,6 +3,7 @@ package com.nuvi.online_renting.item.controller;
 import com.nuvi.online_renting.common.dto.PagedResponse;
 import com.nuvi.online_renting.item.dto.ItemBlockedDateRequestDTO;
 import com.nuvi.online_renting.item.dto.ItemBlockedDateResponseDTO;
+import com.nuvi.online_renting.item.dto.ItemImageResponseDTO;
 import com.nuvi.online_renting.item.dto.ItemRequestDTO;
 import com.nuvi.online_renting.item.dto.ItemResponseDTO;
 import com.nuvi.online_renting.item.service.ItemService;
@@ -153,6 +154,48 @@ public class ItemController {
     public ResponseEntity<Void> removeBlockedDate(@PathVariable Long id,
                                                    @PathVariable Long blockedDateId) {
         itemService.removeBlockedDate(id, blockedDateId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ─── Multi-image Gallery ───────────────────────────────────────────────────
+
+    @Operation(
+            summary = "Add a gallery image to an item",
+            description = "Upload an additional photo to an item's image gallery (max 10 images). " +
+                          "Send as multipart/form-data with field name 'file'. " +
+                          "Use 'displayOrder' to control position (0 = first). " +
+                          "Only the item owner (seller) or an ADMIN can upload."
+    )
+    @PostMapping("/{id}/images")
+    @PreAuthorize("hasAnyAuthority('UPDATE_OWN_ITEM', 'FULL_ACCESS')")
+    public ResponseEntity<ItemImageResponseDTO> addGalleryImage(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(defaultValue = "0") int displayOrder) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(itemService.addGalleryImage(id, file, displayOrder));
+    }
+
+    @Operation(
+            summary = "Get all gallery images for an item",
+            description = "Returns all gallery images for an item ordered by displayOrder then upload time. " +
+                          "Each entry includes a pre-signed URL valid for 60 minutes. No authentication required."
+    )
+    @GetMapping("/{id}/images")
+    public ResponseEntity<java.util.List<ItemImageResponseDTO>> getGalleryImages(@PathVariable Long id) {
+        return ResponseEntity.ok(itemService.getGalleryImages(id));
+    }
+
+    @Operation(
+            summary = "Delete a gallery image from an item",
+            description = "Permanently removes a specific gallery image. " +
+                          "Only the item owner (seller) or an ADMIN can delete."
+    )
+    @DeleteMapping("/{id}/images/{imageId}")
+    @PreAuthorize("hasAnyAuthority('UPDATE_OWN_ITEM', 'FULL_ACCESS')")
+    public ResponseEntity<Void> deleteGalleryImage(@PathVariable Long id,
+                                                    @PathVariable Long imageId) {
+        itemService.deleteGalleryImage(id, imageId);
         return ResponseEntity.noContent().build();
     }
 

@@ -5,8 +5,11 @@ import com.nuvi.online_renting.categories.repository.CategoryRepository;
 import com.nuvi.online_renting.common.dto.PagedResponse;
 import com.nuvi.online_renting.item.dto.ItemBlockedDateRequestDTO;
 import com.nuvi.online_renting.item.dto.ItemBlockedDateResponseDTO;
+import com.nuvi.online_renting.item.dto.ItemImageResponseDTO;
 import com.nuvi.online_renting.item.model.ItemBlockedDate;
+import com.nuvi.online_renting.item.model.ItemImage;
 import com.nuvi.online_renting.item.repository.ItemBlockedDateRepository;
+import com.nuvi.online_renting.item.repository.ItemImageRepository;
 import com.nuvi.online_renting.common.enums.Role;
 import com.nuvi.online_renting.common.exceptions.BadRequestException;
 import com.nuvi.online_renting.common.exceptions.ForbiddenException;
@@ -35,9 +38,12 @@ import java.util.List;
 @Service
 public class ItemServiceImpl implements ItemService {
 
+    private static final int MAX_GALLERY_IMAGES = 10;
+
     private final ItemRepository itemRepository;
     private final CategoryRepository categoryRepository;
     private final ItemBlockedDateRepository blockedDateRepository;
+    private final ItemImageRepository itemImageRepository;
     private final AuthenticationFacade authFacade;
     private final S3StorageService s3StorageService;
     private final FileValidator fileValidator;
@@ -46,6 +52,7 @@ public class ItemServiceImpl implements ItemService {
     public ItemServiceImpl(ItemRepository itemRepository,
                            CategoryRepository categoryRepository,
                            ItemBlockedDateRepository blockedDateRepository,
+                           ItemImageRepository itemImageRepository,
                            AuthenticationFacade authFacade,
                            S3StorageService s3StorageService,
                            FileValidator fileValidator,
@@ -53,6 +60,7 @@ public class ItemServiceImpl implements ItemService {
         this.itemRepository = itemRepository;
         this.categoryRepository = categoryRepository;
         this.blockedDateRepository = blockedDateRepository;
+        this.itemImageRepository = itemImageRepository;
         this.authFacade = authFacade;
         this.s3StorageService = s3StorageService;
         this.fileValidator = fileValidator;
@@ -305,6 +313,79 @@ public class ItemServiceImpl implements ItemService {
         blockedDateRepository.delete(block);
     }
 
+    @Override
+    @Transactional
+    public ItemImageResponseDTO addGalleryImage(Long itemId, MultipartFile file, int displayOrder) {
+        Item item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found with id " + itemId));
+
+        User currentUser = authFacade.getCurrentUser();
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isOwner = item.getSeller().getId().equals(currentUser.getId());
+
+        if (!isAdmin && !isOwner) {
+            throw new ForbiddenException("You are not allowed to upload images for this item");
+        }
+
+        if (itemImageRepository.countByItemId(itemId) >= MAX_GALLERY_IMAGES) {
+            throw new BadRequestException("Maximum of " + MAX_GALLERY_IMAGES + " gallery images per item reached");
+        }
+
+        fileValidator.validateImage(file);
+
+        String originalFilename = file.getOriginalFilename();
+        String ext = originalFilename.substring(originalFilename.lastIndexOf('.') + 1).toLowerCase();
+        String s3Key = "items/gallery_" + itemId + "_" + System.currentTimeMillis() + "." + ext;
+        s3StorageService.uploadFile(s3Key, file);
+
+        ItemImage image = new ItemImage();
+        image.setItem(item);
+        image.setS3Key(s3Key);
+        image.setDisplayOrder(displayOrder);
+
+        return toImageDTO(itemImageRepository.save(image));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ItemImageResponseDTO> getGalleryImages(Long itemId) {
+        if (!itemRepository.existsById(itemId)) {
+            throw new ResourceNotFoundException("Item not found with id " + itemId);
+        }
+        return itemImageRepository.findByItemIdOrderByDisplayOrderAscCreatedAtAsc(itemId)
+                .stream().map(this::toImageDTO).toList();
+    }
+
+    @Override
+    @Transactional
+    public void deleteGalleryImage(Long itemId, Long imageId) {
+        ItemImage image = itemImageRepository.findByIdAndItemId(imageId, itemId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Image " + imageId + " not found for item " + itemId));
+
+        User currentUser = authFacade.getCurrentUser();
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isOwner = image.getItem().getSeller().getId().equals(currentUser.getId());
+
+        if (!isAdmin && !isOwner) {
+            throw new ForbiddenException("You are not allowed to delete images for this item");
+        }
+
+        s3StorageService.deleteFile(image.getS3Key());
+        itemImageRepository.delete(image);
+    }
+
+    private ItemImageResponseDTO toImageDTO(ItemImage image) {
+        ItemImageResponseDTO dto = new ItemImageResponseDTO();
+        dto.setId(image.getId());
+        dto.setItemId(image.getItem().getId());
+        dto.setImageUrl(s3StorageService.generateItemImageUrl(image.getS3Key()));
+        dto.setDisplayOrder(image.getDisplayOrder());
+        dto.setCreatedAt(image.getCreatedAt());
+        dto.setCreatedBy(image.getCreatedBy());
+        return dto;
+    }
+
     private ItemBlockedDateResponseDTO toBlockedDateDTO(ItemBlockedDate block) {
         ItemBlockedDateResponseDTO dto = new ItemBlockedDateResponseDTO();
         dto.setId(block.getId());
@@ -351,6 +432,13 @@ public class ItemServiceImpl implements ItemService {
             dto.setDisplayPrice(exchangeRateService.convert(item.getPricePerDay(), currency));
             dto.setDisplayCurrency(currency.toUpperCase());
         }
+        // Gallery images — pre-signed URLs ordered by displayOrder
+        List<String> galleryUrls = itemImageRepository
+                .findByItemIdOrderByDisplayOrderAscCreatedAtAsc(item.getId())
+                .stream()
+                .map(img -> s3StorageService.generateItemImageUrl(img.getS3Key()))
+                .toList();
+        dto.setImages(galleryUrls);
         dto.setCreatedAt(item.getCreatedAt());
         dto.setUpdatedAt(item.getUpdatedAt());
         dto.setCreatedBy(item.getCreatedBy());

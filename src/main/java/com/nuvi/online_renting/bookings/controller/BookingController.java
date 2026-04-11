@@ -2,6 +2,7 @@ package com.nuvi.online_renting.bookings.controller;
 
 import com.nuvi.online_renting.bookings.dto.BookingRequestDTO;
 import com.nuvi.online_renting.bookings.dto.BookingResponseDTO;
+import com.nuvi.online_renting.bookings.service.BookingReceiptService;
 import com.nuvi.online_renting.bookings.service.BookingService;
 import com.nuvi.online_renting.common.dto.PagedResponse;
 import com.nuvi.online_renting.common.enums.BookingStatus;
@@ -13,6 +14,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 public class BookingController {
 
     private final BookingService bookingService;
+    private final BookingReceiptService bookingReceiptService;
     private final AuthenticationFacade authFacade;
 
     @Operation(
@@ -39,6 +43,22 @@ public class BookingController {
         dto.setUserId(authFacade.getCurrentUser().getId());
         dto.setClientIp(extractClientIp(request));
         return ResponseEntity.ok(bookingService.createBooking(dto));
+    }
+
+    @Operation(
+            summary = "Download booking receipt (PDF)",
+            description = "Generates and returns a PDF receipt for the specified booking. " +
+                          "Accessible by the renter, the item seller, or an ADMIN. " +
+                          "Example: GET /api/v1/bookings/5/receipt"
+    )
+    @GetMapping("/{id}/receipt")
+    @PreAuthorize("hasAnyAuthority('VIEW_OWN_BOOKINGS', 'VIEW_ALL_BOOKINGS', 'COMPLETE_OWN_BOOKING')")
+    public ResponseEntity<byte[]> downloadReceipt(@PathVariable Long id) {
+        byte[] pdf = bookingReceiptService.generateReceipt(id);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"booking-receipt-" + id + ".pdf\"")
+                .body(pdf);
     }
 
     private String extractClientIp(HttpServletRequest request) {
@@ -115,14 +135,15 @@ public class BookingController {
     }
 
     @Operation(
-            summary = "Complete a booking — item returned (Admin)",
-            description = "Admin marks a CONFIRMED booking as COMPLETED, meaning the renter has returned the item. " +
+            summary = "Complete a booking — item returned (Seller / Admin)",
+            description = "Seller marks a CONFIRMED booking on their own item as COMPLETED, meaning the renter has returned the item. " +
                           "An optional return note (e.g. condition of the item) can be added. " +
                           "The item's availability is automatically restored to true after this action. " +
+                          "ADMIN can complete any booking. " +
                           "Example: PATCH /api/v1/bookings/5/complete?returnNote=Returned+in+good+condition"
     )
     @PatchMapping("/{id}/complete")
-    @PreAuthorize("hasAuthority('UPDATE_BOOKING_STATUS')")
+    @PreAuthorize("hasAnyAuthority('COMPLETE_OWN_BOOKING', 'UPDATE_BOOKING_STATUS')")
     public ResponseEntity<BookingResponseDTO> completeBooking(@PathVariable Long id,
                                                               @RequestParam(required = false) String returnNote) {
         return ResponseEntity.ok(bookingService.completeBooking(id, returnNote));

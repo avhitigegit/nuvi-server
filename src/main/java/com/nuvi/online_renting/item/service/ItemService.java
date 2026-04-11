@@ -3,6 +3,7 @@ package com.nuvi.online_renting.item.service;
 import com.nuvi.online_renting.common.dto.PagedResponse;
 import com.nuvi.online_renting.item.dto.ItemBlockedDateRequestDTO;
 import com.nuvi.online_renting.item.dto.ItemBlockedDateResponseDTO;
+import com.nuvi.online_renting.item.dto.ItemImageResponseDTO;
 import com.nuvi.online_renting.item.dto.ItemRequestDTO;
 import com.nuvi.online_renting.item.dto.ItemResponseDTO;
 import org.springframework.data.domain.Pageable;
@@ -37,4 +38,9 @@ public interface ItemService {
     ItemBlockedDateResponseDTO addBlockedDate(Long itemId, ItemBlockedDateRequestDTO dto);
     List<ItemBlockedDateResponseDTO> getBlockedDates(Long itemId);
     void removeBlockedDate(Long itemId, Long blockedDateId);
+
+    // Multi-image gallery
+    ItemImageResponseDTO addGalleryImage(Long itemId, MultipartFile file, int displayOrder);
+    List<ItemImageResponseDTO> getGalleryImages(Long itemId);
+    void deleteGalleryImage(Long itemId, Long imageId);
 }
