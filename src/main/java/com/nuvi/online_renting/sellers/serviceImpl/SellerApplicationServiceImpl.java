@@ -115,6 +115,7 @@ public class SellerApplicationServiceImpl implements SellerApplicationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public SellerApplicationResponseDTO getById(Long id) {
         SellerApplication sellerApplication = sellerApplicationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
@@ -131,6 +132,7 @@ public class SellerApplicationServiceImpl implements SellerApplicationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<SellerApplicationResponseDTO> getMine(Long userId) {
         List<SellerApplication> apps = sellerApplicationRepository.findByUserId(userId);
         // Owner sees their own applications — sensitive fields are masked
@@ -140,6 +142,7 @@ public class SellerApplicationServiceImpl implements SellerApplicationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<SellerApplicationResponseDTO> getByStatus(String status) {
         List<SellerApplication> apps;
         if (status == null) {
